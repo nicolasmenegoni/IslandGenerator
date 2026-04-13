@@ -16,8 +16,9 @@ public class TerrainGenerator {
 
         // Suaviza subida areia -> terra para evitar montanhas imediatas na costa.
         if (islandMask < 0.62) {
-            double coastalProgress = Math.max(0.0, Math.min(1.0, (islandMask - 0.08) / 0.54));
-            double coastalCap = (seaLevel + 1) + (coastalProgress * 16.0);
+            double coastalProgress = Math.max(0.0, Math.min(1.0, (islandMask - 0.10) / 0.52));
+            double eased = coastalProgress * coastalProgress;
+            double coastalCap = (seaLevel + 1) + (eased * 10.0);
             natural = Math.min(natural, coastalCap);
         }
 

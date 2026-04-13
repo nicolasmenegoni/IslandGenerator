@@ -45,6 +45,10 @@ public class TreeGenerator {
                     continue;
                 }
 
+                if (ground == Material.GRASS_BLOCK && random.nextDouble() < 0.35) {
+                    placeGroundVegetation(region, random, x, y, z);
+                }
+
                 if (isTooClose(placed, x, y, z, 6.0)) {
                     continue;
                 }
@@ -180,6 +184,32 @@ public class TreeGenerator {
             if (region.getType(lx, ly, lz).isAir()) {
                 region.setType(lx, ly, lz, Material.JUNGLE_LEAVES);
             }
+        }
+    }
+
+
+    private void placeGroundVegetation(LimitedRegion region, Random random, int x, int y, int z) {
+        if (!region.getType(x, y, z).isAir()) {
+            return;
+        }
+
+        double roll = random.nextDouble();
+        if (roll < 0.30) {
+            region.setType(x, y, z, Material.FERN);
+        } else if (roll < 0.55) {
+            if (region.getType(x, y + 1, z).isAir()) {
+                region.setType(x, y, z, Material.TALL_GRASS);
+            }
+        } else if (roll < 0.70) {
+            region.setType(x, y, z, Material.AZALEA);
+        } else if (roll < 0.78) {
+            region.setType(x, y, z, Material.FLOWERING_AZALEA);
+        } else {
+            Material[] flowers = {
+                    Material.DANDELION, Material.POPPY, Material.BLUE_ORCHID, Material.ALLIUM,
+                    Material.AZURE_BLUET, Material.OXEYE_DAISY, Material.CORNFLOWER, Material.LILY_OF_THE_VALLEY
+            };
+            region.setType(x, y, z, flowers[random.nextInt(flowers.length)]);
         }
     }
 

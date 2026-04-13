@@ -3,6 +3,8 @@ package com.islanddayz.generator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class CityGenerator {
+    public enum RoadType { NONE, MAIN, DIRT }
+
     private static final int ROAD_WIDTH = 5;
     private static final int AXIS_OFFSET = 1200;
 
@@ -49,9 +51,13 @@ public class CityGenerator {
     }
 
     public boolean isRoad(int x, int z) {
+        return getRoadType(x, z) != RoadType.NONE;
+    }
+
+    public RoadType getRoadType(int x, int z) {
         double influence = cityInfluence(x, z);
         if (influence <= 0.45) {
-            return false;
+            return RoadType.NONE;
         }
 
         int cityIndex = nearestCityIndex(x, z);
@@ -61,12 +67,17 @@ public class CityGenerator {
         AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
         AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
 
-        return sampleX.road || sampleZ.road || isRareCurvedRoad(localX, localZ, influence, cityIndex);
+        if (sampleX.road) {
+            return RoadType.MAIN;
+        }
+        if (sampleZ.road || isRareCurvedRoad(localX, localZ, influence, cityIndex)) {
+            return RoadType.DIRT;
+        }
+        return RoadType.NONE;
     }
 
     public boolean isRoadStripe(int x, int z) {
-        double influence = cityInfluence(x, z);
-        if (influence <= 0.45) {
+        if (getRoadType(x, z) != RoadType.MAIN) {
             return false;
         }
 
@@ -75,11 +86,7 @@ public class CityGenerator {
         int localZ = z - CITY_CENTERS[cityIndex][1];
 
         AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
-        AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
-
-        boolean stripeX = sampleX.road && sampleX.roadOffset == 2 && stripePattern(localZ);
-        boolean stripeZ = sampleZ.road && sampleZ.roadOffset == 2 && stripePattern(localX);
-        return stripeX || stripeZ;
+        return sampleX.road && sampleX.roadOffset == 2 && stripePattern(localZ);
     }
 
     private int nearestCityIndex(int x, int z) {

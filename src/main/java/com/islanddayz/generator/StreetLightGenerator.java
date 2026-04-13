@@ -88,12 +88,14 @@ public class StreetLightGenerator {
             region.setType(x, y + i, z, Material.ANDESITE_WALL);
         }
 
-        region.setType(x, y + 5, z, Material.CHISELED_STONE_BRICKS);
+        int bar1X = x + roadDirection.getModX();
+        int bar1Z = z + roadDirection.getModZ();
+        int bar2X = x + roadDirection.getModX() * 2;
+        int bar2Z = z + roadDirection.getModZ() * 2;
 
-        int armX = x + roadDirection.getModX();
-        int armZ = z + roadDirection.getModZ();
-        region.setType(armX, y + 4, armZ, Material.IRON_BARS);
-        region.setType(armX + roadDirection.getModX(), y + 4, armZ + roadDirection.getModZ(), Material.CHAIN);
-        region.setType(armX + roadDirection.getModX(), y + 3, armZ + roadDirection.getModZ(), Material.LANTERN);
+        region.setType(bar1X, y + 4, bar1Z, Material.IRON_BARS);
+        region.setType(bar2X, y + 4, bar2Z, Material.IRON_BARS);
+        region.setType(bar2X, y + 3, bar2Z, Material.CHAIN);
+        region.setType(bar2X, y + 2, bar2Z, Material.LANTERN);
     }
 }
