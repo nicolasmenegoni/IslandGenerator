@@ -43,6 +43,8 @@ public class WorldManager {
         Location spawn = findBeachSpawn();
         world.setSpawnLocation(spawn);
 
+        new ShipwreckGenerator().generateCornerShipwrecks(world);
+
         plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border 1536x1536 aplicada.");
     }
 
