@@ -154,10 +154,15 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
 
         double distance = Math.sqrt((double) worldX * worldX + (double) worldZ * worldZ);
-        double borderFactor = Math.max(0.35, Math.min(1.0, distance / 760.0));
+        double beachRadius = 660.0;
+        double borderRadius = 760.0;
 
-        double fromBeach = Math.max(0.0, Math.min(1.0, (0.48 - islandMask) / 0.48));
-        int depth = (int) Math.floor(33.0 * fromBeach * borderFactor);
+        if (distance <= beachRadius) {
+            return SEA_LEVEL;
+        }
+
+        double progress = Math.max(0.0, Math.min(1.0, (distance - beachRadius) / (borderRadius - beachRadius)));
+        int depth = (int) Math.floor(progress * 33.0);
 
         return SEA_LEVEL - depth;
     }
