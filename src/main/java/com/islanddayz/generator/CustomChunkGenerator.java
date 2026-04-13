@@ -22,6 +22,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private final CityGenerator cityGenerator;
     private final TreeGenerator treeGenerator;
     private final StreetLightGenerator streetLightGenerator;
+    private final HouseGenerator houseGenerator;
     private final SimplexNoiseGenerator roadPatchNoise = new SimplexNoiseGenerator(77123L);
 
     public CustomChunkGenerator(IslandGenerator islandGenerator, TerrainGenerator terrainGenerator, CityGenerator cityGenerator, TreeGenerator treeGenerator) {
@@ -30,6 +31,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
         this.cityGenerator = cityGenerator;
         this.treeGenerator = treeGenerator;
         this.streetLightGenerator = new StreetLightGenerator(cityGenerator);
+        this.houseGenerator = new HouseGenerator(cityGenerator);
     }
 
     @Override
@@ -188,7 +190,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     @Override
     public List<BlockPopulator> getDefaultPopulators(World world) {
-        return List.of(new TreePopulator(treeGenerator), new StreetLightPopulator(streetLightGenerator));
+        return List.of(new HousePopulator(houseGenerator), new TreePopulator(treeGenerator), new StreetLightPopulator(streetLightGenerator));
     }
 
     @Override
@@ -226,6 +228,20 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return false;
     }
 
+
+    private static final class HousePopulator extends BlockPopulator {
+        private final HouseGenerator houseGenerator;
+
+        private HousePopulator(HouseGenerator houseGenerator) {
+            this.houseGenerator = houseGenerator;
+        }
+
+        @Override
+        public void populate(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, LimitedRegion region) {
+            houseGenerator.populateChunk(region, chunkX, chunkZ, random);
+        }
+    }
+
     private static final class TreePopulator extends BlockPopulator {
         private final TreeGenerator treeGenerator;
 
@@ -241,6 +257,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     private static final class StreetLightPopulator extends BlockPopulator {
         private final StreetLightGenerator streetLightGenerator;
+    private final HouseGenerator houseGenerator;
     private final SimplexNoiseGenerator roadPatchNoise = new SimplexNoiseGenerator(77123L);
 
         private StreetLightPopulator(StreetLightGenerator streetLightGenerator) {
