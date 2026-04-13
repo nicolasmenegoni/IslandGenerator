@@ -34,8 +34,8 @@ public class TreeGenerator {
                     continue;
                 }
 
-                double density = treeNoise.noise(x * 0.03, z * 0.03);
-                if (density < 0.36) {
+                double density = treeNoise.noise(x * 0.02, z * 0.02);
+                if (density < 0.28) {
                     continue;
                 }
 
@@ -45,15 +45,22 @@ public class TreeGenerator {
                     continue;
                 }
 
-                if (isTooClose(placed, x, y, z, 5.0)) {
+                if (isTooClose(placed, x, y, z, 6.0)) {
                     continue;
                 }
 
-                if (ground == Material.SAND && random.nextDouble() < 0.75) {
-                    generatePalm(region, random, x, y, z);
+                if (ground == Material.SAND && random.nextDouble() < 0.82) {
+                    generateRealisticPalm(region, random, x, y, z);
                 } else if ((ground == Material.GRASS_BLOCK || ground == Material.COARSE_DIRT || ground == Material.DIRT)
-                        && random.nextDouble() < 0.6) {
-                    generateInteriorTree(region, random, x, y, z);
+                        && random.nextDouble() < 0.68) {
+                    double type = random.nextDouble();
+                    if (type < 0.55) {
+                        generateBroadleaf(region, random, x, y, z);
+                    } else if (type < 0.82) {
+                        generatePine(region, random, x, y, z);
+                    } else {
+                        generateBranchyTree(region, random, x, y, z);
+                    }
                 }
 
                 placed.add(new Vector(x, y, z));
@@ -70,32 +77,69 @@ public class TreeGenerator {
         return false;
     }
 
-    private void generateInteriorTree(LimitedRegion region, Random random, int x, int y, int z) {
-        int trunkHeight = 5 + random.nextInt(4);
+    private void generateBroadleaf(LimitedRegion region, Random random, int x, int y, int z) {
+        int trunkHeight = 6 + random.nextInt(5);
         for (int i = 0; i < trunkHeight; i++) {
             region.setType(x, y + i, z, Material.OAK_LOG);
+            if (i > 2 && random.nextDouble() < 0.18) {
+                int bx = x + (random.nextBoolean() ? 1 : -1);
+                int bz = z + (random.nextBoolean() ? 1 : -1);
+                region.setType(bx, y + i, bz, Material.OAK_LOG);
+            }
         }
 
-        int canopyCenterY = y + trunkHeight;
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                for (int dy = -1; dy <= 2; dy++) {
-                    double dist = Math.sqrt(dx * dx + dz * dz + (dy * dy * 0.7));
-                    if (dist <= 2.4 + (random.nextDouble() * 0.5)) {
-                        int lx = x + dx;
-                        int ly = canopyCenterY + dy;
-                        int lz = z + dz;
-                        if (region.getType(lx, ly, lz).isAir()) {
-                            region.setType(lx, ly, lz, Material.OAK_LEAVES);
+        int top = y + trunkHeight;
+        buildBlobCanopy(region, random, x, top, z, 3, Material.OAK_LEAVES);
+    }
+
+    private void generateBranchyTree(LimitedRegion region, Random random, int x, int y, int z) {
+        int trunkHeight = 7 + random.nextInt(4);
+        for (int i = 0; i < trunkHeight; i++) {
+            region.setType(x, y + i, z, Material.DARK_OAK_LOG);
+        }
+
+        int top = y + trunkHeight;
+        BlockFace[] branches = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
+        for (BlockFace branch : branches) {
+            if (random.nextDouble() < 0.75) {
+                int bx = x + branch.getModX() * 2;
+                int bz = z + branch.getModZ() * 2;
+                region.setType(x + branch.getModX(), top - 1, z + branch.getModZ(), Material.DARK_OAK_LOG);
+                region.setType(bx, top, bz, Material.DARK_OAK_LOG);
+                buildBlobCanopy(region, random, bx, top, bz, 2, Material.DARK_OAK_LEAVES);
+            }
+        }
+
+        buildBlobCanopy(region, random, x, top + 1, z, 3, Material.DARK_OAK_LEAVES);
+    }
+
+    private void generatePine(LimitedRegion region, Random random, int x, int y, int z) {
+        int trunkHeight = 8 + random.nextInt(6);
+        for (int i = 0; i < trunkHeight; i++) {
+            region.setType(x, y + i, z, Material.SPRUCE_LOG);
+        }
+
+        int top = y + trunkHeight;
+        int radius = 3;
+        for (int layer = 0; layer < 6; layer++) {
+            int ly = top - layer;
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) + Math.abs(dz) <= radius + (random.nextBoolean() ? 0 : 1)) {
+                        if (region.getType(x + dx, ly, z + dz).isAir()) {
+                            region.setType(x + dx, ly, z + dz, Material.SPRUCE_LEAVES);
                         }
                     }
                 }
             }
+            if (layer % 2 == 1 && radius > 1) {
+                radius--;
+            }
         }
     }
 
-    private void generatePalm(LimitedRegion region, Random random, int x, int y, int z) {
-        int height = 6 + random.nextInt(4);
+    private void generateRealisticPalm(LimitedRegion region, Random random, int x, int y, int z) {
+        int height = 7 + random.nextInt(5);
         int cx = x;
         int cz = z;
 
@@ -107,24 +151,51 @@ public class TreeGenerator {
         };
 
         for (int i = 0; i < height; i++) {
-            if (i > height / 2 && random.nextDouble() < 0.42) {
+            if (i > 1 && random.nextDouble() < 0.55) {
                 cx += bendFace.getModX();
                 cz += bendFace.getModZ();
             }
             region.setType(cx, y + i, cz, Material.JUNGLE_LOG);
         }
 
-        int topY = y + height;
-        region.setType(cx, topY, cz, Material.JUNGLE_LEAVES);
+        int crownY = y + height;
+        region.setType(cx, crownY, cz, Material.JUNGLE_LEAVES);
+        buildPalmFrond(region, cx, crownY, cz, 1, 0);
+        buildPalmFrond(region, cx, crownY, cz, -1, 0);
+        buildPalmFrond(region, cx, crownY, cz, 0, 1);
+        buildPalmFrond(region, cx, crownY, cz, 0, -1);
+        buildPalmFrond(region, cx, crownY, cz, 1, 1);
+        buildPalmFrond(region, cx, crownY, cz, -1, -1);
 
-        int[][] arms = {{2, 0}, {-2, 0}, {0, 2}, {0, -2}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}};
-        for (int[] arm : arms) {
-            for (int i = 1; i <= 3; i++) {
-                int lx = cx + (arm[0] * i) / 2;
-                int lz = cz + (arm[1] * i) / 2;
-                int ly = topY - (i > 2 ? 1 : 0);
-                if (region.getType(lx, ly, lz).isAir()) {
-                    region.setType(lx, ly, lz, Material.JUNGLE_LEAVES);
+        if (random.nextDouble() < 0.6) {
+            region.setType(cx + 1, crownY - 1, cz, Material.COCOA);
+        }
+    }
+
+    private void buildPalmFrond(LimitedRegion region, int x, int y, int z, int dx, int dz) {
+        for (int i = 1; i <= 4; i++) {
+            int lx = x + dx * i;
+            int lz = z + dz * i;
+            int ly = y - (i > 2 ? 1 : 0);
+            if (region.getType(lx, ly, lz).isAir()) {
+                region.setType(lx, ly, lz, Material.JUNGLE_LEAVES);
+            }
+        }
+    }
+
+    private void buildBlobCanopy(LimitedRegion region, Random random, int x, int y, int z, int radius, Material leaves) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    double dist = Math.sqrt(dx * dx + dz * dz + (dy * dy * 0.8));
+                    if (dist <= radius + (random.nextDouble() * 0.6)) {
+                        int lx = x + dx;
+                        int ly = y + dy;
+                        int lz = z + dz;
+                        if (region.getType(lx, ly, lz).isAir()) {
+                            region.setType(lx, ly, lz, leaves);
+                        }
+                    }
                 }
             }
         }

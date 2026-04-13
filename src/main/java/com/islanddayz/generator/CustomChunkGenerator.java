@@ -7,7 +7,6 @@ import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.LimitedRegion;
 import org.bukkit.generator.WorldInfo;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -19,12 +18,14 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private final TerrainGenerator terrainGenerator;
     private final CityGenerator cityGenerator;
     private final TreeGenerator treeGenerator;
+    private final StreetLightGenerator streetLightGenerator;
 
     public CustomChunkGenerator(IslandGenerator islandGenerator, TerrainGenerator terrainGenerator, CityGenerator cityGenerator, TreeGenerator treeGenerator) {
         this.islandGenerator = islandGenerator;
         this.terrainGenerator = terrainGenerator;
         this.cityGenerator = cityGenerator;
         this.treeGenerator = treeGenerator;
+        this.streetLightGenerator = new StreetLightGenerator(cityGenerator);
     }
 
     @Override
@@ -78,22 +79,23 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return false;
         }
 
-        boolean coastalBand = islandMask < 0.46D || topY <= SEA_LEVEL + 9;
+        boolean coastalBand = islandMask < 0.58D || topY <= SEA_LEVEL + 18;
         if (!coastalBand) {
             return false;
         }
 
-        double inlandProgress = Math.max(0.0, Math.min(1.0, (islandMask - 0.16) / 0.32));
-        int stairRise = (int) Math.floor(inlandProgress * 14.0);
-        int variation = Math.floorMod(worldX * 31 + worldZ * 17, 3) - 1;
-        int sandFloor = SAND_UNDERWATER_START + stairRise + variation;
+        int step = Math.max(0, Math.min(20, (int) Math.floor((islandMask - 0.02) * 42.0)));
+        int variation = Math.floorMod(worldX * 29 + worldZ * 11, 4) - 1;
+        int sandFloor = SAND_UNDERWATER_START + step + variation;
 
+        int sandCap = SEA_LEVEL + Math.max(1, step / 4);
         if (topY <= SEA_LEVEL) {
             return y >= sandFloor;
         }
 
-        int inlandCap = Math.max(sandFloor, topY - (6 - Math.min(4, stairRise / 3)));
-        return y >= inlandCap;
+        int inlandDepth = 8 - Math.min(5, step / 3);
+        int inlandCap = Math.max(sandFloor, topY - inlandDepth);
+        return y >= inlandCap && y <= sandCap + 6;
     }
 
     private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
@@ -104,11 +106,11 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return Material.GRASS_BLOCK;
         }
 
-        if (topY <= SEA_LEVEL + 3 || islandMask < 0.34D) {
+        if (topY <= SEA_LEVEL + 5 || islandMask < 0.40D) {
             return Material.SAND;
         }
 
-        if (topY <= SEA_LEVEL + 6) {
+        if (topY <= SEA_LEVEL + 10) {
             return Material.COARSE_DIRT;
         }
 
@@ -126,7 +128,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     @Override
     public List<BlockPopulator> getDefaultPopulators(World world) {
-        return Collections.singletonList(new TreePopulator(treeGenerator));
+        return List.of(new TreePopulator(treeGenerator), new StreetLightPopulator(streetLightGenerator));
     }
 
     @Override
@@ -174,6 +176,19 @@ public class CustomChunkGenerator extends ChunkGenerator {
         @Override
         public void populate(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, LimitedRegion region) {
             treeGenerator.populateChunk(region, chunkX, chunkZ, random);
+        }
+    }
+
+    private static final class StreetLightPopulator extends BlockPopulator {
+        private final StreetLightGenerator streetLightGenerator;
+
+        private StreetLightPopulator(StreetLightGenerator streetLightGenerator) {
+            this.streetLightGenerator = streetLightGenerator;
+        }
+
+        @Override
+        public void populate(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, LimitedRegion region) {
+            streetLightGenerator.populateChunk(region, chunkX, chunkZ);
         }
     }
 }
