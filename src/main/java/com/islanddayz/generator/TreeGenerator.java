@@ -12,10 +12,12 @@ import java.util.Random;
 
 public class TreeGenerator {
     private final IslandGenerator islandGenerator;
+    private final CityGenerator cityGenerator;
     private final SimplexNoiseGenerator treeNoise = new SimplexNoiseGenerator(224477L);
 
-    public TreeGenerator(IslandGenerator islandGenerator) {
+    public TreeGenerator(IslandGenerator islandGenerator, CityGenerator cityGenerator) {
         this.islandGenerator = islandGenerator;
+        this.cityGenerator = cityGenerator;
     }
 
     public void populateChunk(LimitedRegion region, int chunkX, int chunkZ, Random random) {
@@ -28,7 +30,7 @@ public class TreeGenerator {
                 int x = startX + localX;
                 int z = startZ + localZ;
                 double mask = islandGenerator.islandMask(x, z);
-                if (mask < 0.2) {
+                if (mask < 0.2 || cityGenerator.isInsideCity(x, z)) {
                     continue;
                 }
 

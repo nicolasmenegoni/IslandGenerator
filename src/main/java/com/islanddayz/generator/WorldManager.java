@@ -24,7 +24,8 @@ public class WorldManager {
     }
 
     public void createOrLoadWorld() {
-        CustomChunkGenerator generator = new CustomChunkGenerator(islandGenerator, new TerrainGenerator(), new CityGenerator(), new TreeGenerator(islandGenerator));
+        CityGenerator cityGenerator = new CityGenerator();
+        CustomChunkGenerator generator = new CustomChunkGenerator(islandGenerator, new TerrainGenerator(), cityGenerator, new TreeGenerator(islandGenerator, cityGenerator));
 
         WorldCreator creator = new WorldCreator(WORLD_NAME)
                 .type(WorldType.NORMAL)

@@ -3,7 +3,12 @@ package com.islanddayz.generator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class CityGenerator {
-    private static final int CITY_RADIUS = 120;
+    private static final int CITY_RADIUS = 150;
+    private static final int ROAD_WIDTH = 5;
+    private static final int AXIS_OFFSET = 320;
+
+    private static final int[] LOT_PATTERN_X = {10, 8, 12, 15, 11, 18, 10, 15, 19, 9, 14};
+    private static final int[] LOT_PATTERN_Z = {8, 10, 12, 15, 10, 18, 13, 19, 11, 10, 16};
 
     private final SimplexNoiseGenerator warpNoise = new SimplexNoiseGenerator(42888L);
 
@@ -16,25 +21,64 @@ public class CityGenerator {
             return false;
         }
 
-        double warpX = warpNoise.noise(x * 0.025, z * 0.025) * 11.0;
-        double warpZ = warpNoise.noise((x + 500) * 0.025, (z - 500) * 0.025) * 11.0;
+        double warpedX = x + warpX(x, z);
+        double warpedZ = z + warpZ(x, z);
 
-        double roadXPattern = Math.abs(Math.sin((x + warpX) / 17.0));
-        double roadZPattern = Math.abs(Math.sin((z + warpZ) / 19.0));
-
-        boolean crossRoad = roadXPattern < 0.17 || roadZPattern < 0.16;
-        double ring = Math.abs(Math.sqrt((double) x * x + (double) z * z) - 64.0);
-        boolean ringRoad = ring < 3.0;
-
-        return crossRoad || ringRoad;
+        AxisSample sampleX = sampleAxis(warpedX, LOT_PATTERN_X);
+        AxisSample sampleZ = sampleAxis(warpedZ, LOT_PATTERN_Z);
+        return sampleX.road || sampleZ.road;
     }
 
     public boolean isRoadStripe(int x, int z) {
-        if (!isRoad(x, z)) {
+        if (!isInsideCity(x, z)) {
             return false;
         }
 
-        double lane = Math.abs(Math.sin((x + z) / 4.0));
-        return lane < 0.14;
+        double warpedX = x + warpX(x, z);
+        double warpedZ = z + warpZ(x, z);
+
+        AxisSample sampleX = sampleAxis(warpedX, LOT_PATTERN_X);
+        AxisSample sampleZ = sampleAxis(warpedZ, LOT_PATTERN_Z);
+
+        boolean stripeOnXRoad = sampleX.road && sampleX.roadOffset >= 1 && sampleX.roadOffset <= 2;
+        boolean stripeOnZRoad = sampleZ.road && sampleZ.roadOffset >= 1 && sampleZ.roadOffset <= 2;
+
+        return stripeOnXRoad || stripeOnZRoad;
+    }
+
+    private double warpX(int x, int z) {
+        return warpNoise.noise(x * 0.012, z * 0.012) * 3.5;
+    }
+
+    private double warpZ(int x, int z) {
+        return warpNoise.noise((x + 900) * 0.012, (z - 900) * 0.012) * 3.5;
+    }
+
+    private AxisSample sampleAxis(double coordinate, int[] pattern) {
+        int value = (int) Math.floor(coordinate) + AXIS_OFFSET;
+        int cursor = 0;
+        int index = 0;
+
+        while (cursor < AXIS_OFFSET * 2 + 256) {
+            int lotSize = pattern[index % pattern.length];
+            int roadStart = cursor + lotSize;
+            int roadEnd = roadStart + ROAD_WIDTH;
+
+            if (value >= cursor && value < lotSize + cursor) {
+                return new AxisSample(false, -1);
+            }
+
+            if (value >= roadStart && value < roadEnd) {
+                return new AxisSample(true, value - roadStart);
+            }
+
+            cursor = roadEnd;
+            index++;
+        }
+
+        return new AxisSample(false, -1);
+    }
+
+    private record AxisSample(boolean road, int roadOffset) {
     }
 }

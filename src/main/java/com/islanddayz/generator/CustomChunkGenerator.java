@@ -4,8 +4,8 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
-import org.bukkit.generator.WorldInfo;
 import org.bukkit.generator.LimitedRegion;
+import org.bukkit.generator.WorldInfo;
 
 import java.util.Collections;
 import java.util.List;
@@ -13,6 +13,7 @@ import java.util.Random;
 
 public class CustomChunkGenerator extends ChunkGenerator {
     private static final int SEA_LEVEL = 63;
+    private static final int SAND_UNDERWATER_START = SEA_LEVEL - 16;
 
     private final IslandGenerator islandGenerator;
     private final TerrainGenerator terrainGenerator;
@@ -35,38 +36,64 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
                 double islandMask = islandGenerator.islandMask(worldX, worldZ);
                 fillOcean(chunkData, localX, localZ);
-
                 if (islandMask <= 0.02D) {
                     continue;
                 }
 
-                int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL);
-                Material topMaterial = pickTopMaterial(worldX, worldZ, topY, islandMask);
+                boolean insideCity = cityGenerator.isInsideCity(worldX, worldZ);
+                int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL, insideCity);
+                Material topMaterial = pickTopMaterial(worldX, worldZ, topY, islandMask, insideCity);
 
                 for (int y = 40; y <= topY; y++) {
-                    Material layer = Material.STONE;
-                    if (y >= topY - 4 && y < topY) {
-                        layer = Material.DIRT;
-                    }
-                    if (y == topY) {
-                        layer = topMaterial;
-                    }
+                    Material layer = pickLayerMaterial(y, topY, islandMask, insideCity, topMaterial);
                     chunkData.setBlock(localX, y, localZ, layer);
                 }
-
             }
         }
     }
 
-    private Material pickTopMaterial(int x, int z, int topY, double islandMask) {
-        if (cityGenerator.isInsideCity(x, z)) {
+    private Material pickLayerMaterial(int y, int topY, double islandMask, boolean insideCity, Material topMaterial) {
+        if (y == topY) {
+            return topMaterial;
+        }
+
+        if (insideCity) {
+            return y >= topY - 3 ? Material.DIRT : Material.STONE;
+        }
+
+        if (isBeachLayer(y, topY, islandMask)) {
+            return Material.SAND;
+        }
+
+        if (y >= topY - 4) {
+            return Material.DIRT;
+        }
+
+        return Material.STONE;
+    }
+
+    private boolean isBeachLayer(int y, int topY, double islandMask) {
+        boolean coastalBand = islandMask < 0.34D || topY <= SEA_LEVEL + 4;
+        if (!coastalBand) {
+            return false;
+        }
+
+        if (topY <= SEA_LEVEL) {
+            return y >= SAND_UNDERWATER_START;
+        }
+
+        return y >= Math.max(SAND_UNDERWATER_START, topY - 5);
+    }
+
+    private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
+        if (insideCity) {
             if (cityGenerator.isRoad(x, z)) {
-                return cityGenerator.isRoadStripe(x, z) ? Material.YELLOW_CONCRETE : Material.BLACK_CONCRETE;
+                return cityGenerator.isRoadStripe(x, z) ? Material.YELLOW_CONCRETE : Material.GRAY_CONCRETE;
             }
             return Material.DIRT;
         }
 
-        if (topY <= SEA_LEVEL + 2 || islandMask < 0.28D) {
+        if (topY <= SEA_LEVEL + 2 || islandMask < 0.30D) {
             return Material.SAND;
         }
 
