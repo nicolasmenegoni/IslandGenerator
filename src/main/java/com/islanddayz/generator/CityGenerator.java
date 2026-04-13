@@ -3,47 +3,75 @@ package com.islanddayz.generator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class CityGenerator {
-    private static final int CITY_RADIUS = 150;
     private static final int ROAD_WIDTH = 5;
-    private static final int AXIS_OFFSET = 320;
+    private static final int AXIS_OFFSET = 420;
 
     private static final int[] LOT_PATTERN_X = {10, 8, 12, 15, 11, 18, 10, 15, 19, 9, 14};
     private static final int[] LOT_PATTERN_Z = {8, 10, 12, 15, 10, 18, 13, 19, 11, 10, 16};
 
     private final SimplexNoiseGenerator warpNoise = new SimplexNoiseGenerator(42888L);
+    private final SimplexNoiseGenerator shapeNoise = new SimplexNoiseGenerator(90812L);
+
+    public double cityInfluence(int x, int z) {
+        double angle = Math.atan2(z, x);
+        double dist = Math.sqrt((double) x * x + (double) z * z);
+
+        double irregularRadius = 138
+                + Math.sin(angle * 2.6) * 16
+                + Math.sin(angle * 5.3) * 9
+                + shapeNoise.noise(x * 0.01, z * 0.01) * 18;
+
+        double edge = irregularRadius - dist;
+        return smooth((edge + 18.0) / 30.0);
+    }
 
     public boolean isInsideCity(int x, int z) {
-        return (x * x) + (z * z) <= CITY_RADIUS * CITY_RADIUS;
+        return cityInfluence(x, z) > 0.08;
     }
 
     public boolean isRoad(int x, int z) {
-        if (!isInsideCity(x, z)) {
+        double influence = cityInfluence(x, z);
+        if (influence <= 0.12) {
             return false;
         }
 
-        double warpedX = x + warpX(x, z);
-        double warpedZ = z + warpZ(x, z);
+        AxisSample sampleX = sampleAxis(x + warpX(x, z), LOT_PATTERN_X);
+        AxisSample sampleZ = sampleAxis(z + warpZ(x, z), LOT_PATTERN_Z);
 
-        AxisSample sampleX = sampleAxis(warpedX, LOT_PATTERN_X);
-        AxisSample sampleZ = sampleAxis(warpedZ, LOT_PATTERN_Z);
-        return sampleX.road || sampleZ.road;
+        return sampleX.road || sampleZ.road || isRareCurvedRoad(x, z, influence);
     }
 
     public boolean isRoadStripe(int x, int z) {
-        if (!isInsideCity(x, z)) {
+        double influence = cityInfluence(x, z);
+        if (influence <= 0.12) {
             return false;
         }
 
-        double warpedX = x + warpX(x, z);
-        double warpedZ = z + warpZ(x, z);
+        AxisSample sampleX = sampleAxis(x + warpX(x, z), LOT_PATTERN_X);
+        AxisSample sampleZ = sampleAxis(z + warpZ(x, z), LOT_PATTERN_Z);
 
-        AxisSample sampleX = sampleAxis(warpedX, LOT_PATTERN_X);
-        AxisSample sampleZ = sampleAxis(warpedZ, LOT_PATTERN_Z);
+        boolean stripeX = sampleX.road && sampleX.roadOffset == 2 && stripePattern(z);
+        boolean stripeZ = sampleZ.road && sampleZ.roadOffset == 2 && stripePattern(x);
+        return stripeX || stripeZ;
+    }
 
-        boolean stripeOnXRoad = sampleX.road && sampleX.roadOffset >= 1 && sampleX.roadOffset <= 2;
-        boolean stripeOnZRoad = sampleZ.road && sampleZ.roadOffset >= 1 && sampleZ.roadOffset <= 2;
+    private boolean stripePattern(int axisCoord) {
+        int segment = Math.floorDiv(axisCoord, 24);
+        int cycle = (segment & 1) == 0 ? 3 : 4;
+        int pos = Math.floorMod(axisCoord, cycle);
+        return pos < 2;
+    }
 
-        return stripeOnXRoad || stripeOnZRoad;
+    private boolean isRareCurvedRoad(int x, int z, double influence) {
+        if (influence < 0.35) {
+            return false;
+        }
+
+        double curveCenter = Math.sin((x + shapeNoise.noise(x * 0.01, z * 0.01) * 20.0) / 26.0) * 18.0;
+        double distance = Math.abs(z - curveCenter);
+        boolean nearCurve = distance <= 2.0;
+        double rareGate = Math.abs(shapeNoise.noise((x + 1200) * 0.02, (z - 300) * 0.02));
+        return nearCurve && rareGate < 0.045;
     }
 
     private double warpX(int x, int z) {
@@ -59,17 +87,17 @@ public class CityGenerator {
         int cursor = 0;
         int index = 0;
 
-        while (cursor < AXIS_OFFSET * 2 + 256) {
+        while (cursor < AXIS_OFFSET * 2 + 512) {
             int lotSize = pattern[index % pattern.length];
             int roadStart = cursor + lotSize;
             int roadEnd = roadStart + ROAD_WIDTH;
 
-            if (value >= cursor && value < lotSize + cursor) {
-                return new AxisSample(false, -1);
-            }
-
             if (value >= roadStart && value < roadEnd) {
                 return new AxisSample(true, value - roadStart);
+            }
+
+            if (value >= cursor && value < roadStart) {
+                return new AxisSample(false, -1);
             }
 
             cursor = roadEnd;
@@ -77,6 +105,11 @@ public class CityGenerator {
         }
 
         return new AxisSample(false, -1);
+    }
+
+    private double smooth(double value) {
+        double v = Math.max(0, Math.min(1, value));
+        return v * v * (3 - 2 * v);
     }
 
     private record AxisSample(boolean road, int roadOffset) {

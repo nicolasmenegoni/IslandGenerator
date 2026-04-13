@@ -40,28 +40,29 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
-                boolean insideCity = cityGenerator.isInsideCity(worldX, worldZ);
-                int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL, insideCity);
+                double cityInfluence = cityGenerator.cityInfluence(worldX, worldZ);
+                int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL, cityInfluence);
+                boolean insideCity = cityInfluence > 0.12;
                 Material topMaterial = pickTopMaterial(worldX, worldZ, topY, islandMask, insideCity);
 
                 for (int y = 40; y <= topY; y++) {
-                    Material layer = pickLayerMaterial(y, topY, islandMask, insideCity, topMaterial);
+                    Material layer = pickLayerMaterial(worldX, worldZ, y, topY, islandMask, cityInfluence, topMaterial);
                     chunkData.setBlock(localX, y, localZ, layer);
                 }
             }
         }
     }
 
-    private Material pickLayerMaterial(int y, int topY, double islandMask, boolean insideCity, Material topMaterial) {
+    private Material pickLayerMaterial(int worldX, int worldZ, int y, int topY, double islandMask, double cityInfluence, Material topMaterial) {
         if (y == topY) {
             return topMaterial;
         }
 
-        if (insideCity) {
+        if (cityInfluence > 0.12) {
             return y >= topY - 3 ? Material.DIRT : Material.STONE;
         }
 
-        if (isBeachLayer(y, topY, islandMask)) {
+        if (isBeachLayer(worldX, worldZ, y, topY, islandMask, cityInfluence)) {
             return Material.SAND;
         }
 
@@ -72,17 +73,27 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return Material.STONE;
     }
 
-    private boolean isBeachLayer(int y, int topY, double islandMask) {
-        boolean coastalBand = islandMask < 0.34D || topY <= SEA_LEVEL + 4;
+    private boolean isBeachLayer(int worldX, int worldZ, int y, int topY, double islandMask, double cityInfluence) {
+        if (cityInfluence > 0.05) {
+            return false;
+        }
+
+        boolean coastalBand = islandMask < 0.46D || topY <= SEA_LEVEL + 9;
         if (!coastalBand) {
             return false;
         }
 
+        double inlandProgress = Math.max(0.0, Math.min(1.0, (islandMask - 0.16) / 0.32));
+        int stairRise = (int) Math.floor(inlandProgress * 14.0);
+        int variation = Math.floorMod(worldX * 31 + worldZ * 17, 3) - 1;
+        int sandFloor = SAND_UNDERWATER_START + stairRise + variation;
+
         if (topY <= SEA_LEVEL) {
-            return y >= SAND_UNDERWATER_START;
+            return y >= sandFloor;
         }
 
-        return y >= Math.max(SAND_UNDERWATER_START, topY - 5);
+        int inlandCap = Math.max(sandFloor, topY - (6 - Math.min(4, stairRise / 3)));
+        return y >= inlandCap;
     }
 
     private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
@@ -90,14 +101,14 @@ public class CustomChunkGenerator extends ChunkGenerator {
             if (cityGenerator.isRoad(x, z)) {
                 return cityGenerator.isRoadStripe(x, z) ? Material.YELLOW_CONCRETE : Material.GRAY_CONCRETE;
             }
-            return Material.DIRT;
+            return Material.GRASS_BLOCK;
         }
 
-        if (topY <= SEA_LEVEL + 2 || islandMask < 0.30D) {
+        if (topY <= SEA_LEVEL + 3 || islandMask < 0.34D) {
             return Material.SAND;
         }
 
-        if (topY <= SEA_LEVEL + 5) {
+        if (topY <= SEA_LEVEL + 6) {
             return Material.COARSE_DIRT;
         }
 
