@@ -55,7 +55,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     chunkData.setBlock(localX, y, localZ, layer);
                 }
 
-                chunkData.setBiome(localX, topY, localZ, Biome.PLAINS);
+                chunkData.setBiome(localX, localZ, Biome.PLAINS);
             }
         }
     }
