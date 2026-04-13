@@ -51,6 +51,15 @@ public class StreetLightGenerator {
             return null;
         }
 
+
+        boolean nearJunction = cityGenerator.isRoad(x + 4, z) && cityGenerator.isRoad(x, z + 4)
+                || cityGenerator.isRoad(x - 4, z) && cityGenerator.isRoad(x, z - 4)
+                || cityGenerator.isRoad(x + 4, z) && cityGenerator.isRoad(x, z - 4)
+                || cityGenerator.isRoad(x - 4, z) && cityGenerator.isRoad(x, z + 4);
+        if (!nearJunction) {
+            return null;
+        }
+
         if (cityGenerator.isRoad(x + 1, z) && !cityGenerator.isRoad(x - 1, z)) return BlockFace.EAST;
         if (cityGenerator.isRoad(x - 1, z) && !cityGenerator.isRoad(x + 1, z)) return BlockFace.WEST;
         if (cityGenerator.isRoad(x, z + 1) && !cityGenerator.isRoad(x, z - 1)) return BlockFace.SOUTH;
@@ -60,13 +69,13 @@ public class StreetLightGenerator {
     }
 
     private boolean passesSpacingRule(int x, int z) {
-        int spacing = 13 + Math.floorMod(x * 7 + z * 11, 5);
+        int spacing = 21 + Math.floorMod(x * 5 + z * 9, 10);
         return Math.floorMod((x * 3) + (z * 5), spacing) == 0;
     }
 
     private boolean tooClose(List<Vector> placed, int x, int z) {
         for (Vector pos : placed) {
-            if (pos.distanceSquared(new Vector(x, pos.getY(), z)) < 13 * 13) {
+            if (pos.distanceSquared(new Vector(x, pos.getY(), z)) < 20 * 20) {
                 return true;
             }
         }

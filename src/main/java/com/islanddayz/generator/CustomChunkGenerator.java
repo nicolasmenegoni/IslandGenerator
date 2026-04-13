@@ -46,8 +46,8 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 int coastStairTop = getCoastStairTop(worldX, worldZ, islandMask, cityInfluence);
                 if (coastStairTop > Integer.MIN_VALUE) {
                     topY = Math.max(topY, coastStairTop);
-                    if (islandMask < 0.38) {
-                        topY = Math.min(topY, coastStairTop + 5);
+                    if (islandMask < 0.52) {
+                        topY = Math.min(topY, SEA_LEVEL + 2);
                     }
                 }
 
@@ -103,14 +103,14 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
 
     private int getCoastStairTop(int worldX, int worldZ, double islandMask, double cityInfluence) {
-        if (cityInfluence > 0.05 || islandMask < 0.02 || islandMask > 0.60) {
+        if (cityInfluence > 0.05 || islandMask < 0.02 || islandMask > 0.55) {
             return Integer.MIN_VALUE;
         }
 
-        double inland = Math.max(0.0, Math.min(1.0, (islandMask - 0.02) / 0.58));
-        int step = (int) Math.floor(inland * 24.0);
-        int variation = Math.floorMod(worldX * 13 + worldZ * 7, 3) - 1;
-        return SAND_UNDERWATER_START + step + variation;
+        double inland = Math.max(0.0, Math.min(1.0, (islandMask - 0.02) / 0.53));
+        int step = (int) Math.floor(inland * 16.0);
+        int variation = Math.floorMod(worldX * 13 + worldZ * 7, 2);
+        return Math.min(SEA_LEVEL, SAND_UNDERWATER_START + step + variation);
     }
 
     private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
@@ -121,11 +121,11 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return Material.GRASS_BLOCK;
         }
 
-        if (topY <= SEA_LEVEL + 5 || islandMask < 0.40D) {
+        if (topY <= SEA_LEVEL + 6 || islandMask < 0.48D) {
             return Material.SAND;
         }
 
-        if (topY <= SEA_LEVEL + 10) {
+        if (topY <= SEA_LEVEL + 12) {
             return Material.COARSE_DIRT;
         }
 

@@ -61,13 +61,22 @@ public class WorldManager {
 
             if ((ground == Material.SAND || ground == Material.RED_SAND)
                     && feet.isAir()
-                    && world.getBlockAt(x, y + 1, z).getType().isAir()) {
+                    && world.getBlockAt(x, y + 1, z).getType().isAir()
+                    && isShoreline(x, y - 1, z)) {
                 return new Location(world, x + 0.5, y, z + 0.5);
             }
         }
 
         int fallbackY = world.getHighestBlockYAt(0, 0);
         return new Location(world, 0.5, fallbackY + 1, 0.5);
+    }
+
+
+    private boolean isShoreline(int x, int y, int z) {
+        return world.getBlockAt(x + 1, y, z).getType() == Material.WATER
+                || world.getBlockAt(x - 1, y, z).getType() == Material.WATER
+                || world.getBlockAt(x, y, z + 1).getType() == Material.WATER
+                || world.getBlockAt(x, y, z - 1).getType() == Material.WATER;
     }
 
     private void ensureWorld() {

@@ -6,6 +6,14 @@ public class CityGenerator {
     private static final int ROAD_WIDTH = 5;
     private static final int AXIS_OFFSET = 1200;
 
+    private static final int[][] CITY_CENTERS = {
+            {0, 0},
+            {-300, 220},
+            {320, -200},
+            {220, 330},
+            {-360, -280}
+    };
+
     private static final int[] LOT_PATTERN_X = {18, 20, 22, 18, 29, 25, 30, 27, 35, 24, 18, 29};
     private static final int[] LOT_PATTERN_Z = {18, 18, 20, 22, 29, 35, 25, 27, 30, 19, 24, 29};
 
@@ -13,16 +21,27 @@ public class CityGenerator {
     private final SimplexNoiseGenerator shapeNoise = new SimplexNoiseGenerator(90812L);
 
     public double cityInfluence(int x, int z) {
-        double angle = Math.atan2(z, x);
-        double dist = Math.sqrt((double) x * x + (double) z * z);
+        double max = 0.0;
+        for (int i = 0; i < CITY_CENTERS.length; i++) {
+            int cx = CITY_CENTERS[i][0];
+            int cz = CITY_CENTERS[i][1];
+            double localX = x - cx;
+            double localZ = z - cz;
+            double angle = Math.atan2(localZ, localX);
+            double dist = Math.sqrt(localX * localX + localZ * localZ);
 
-        double irregularRadius = 280
-                + Math.sin(angle * 2.2) * 32
-                + Math.sin(angle * 4.9) * 20
-                + shapeNoise.noise(x * 0.004, z * 0.004) * 45;
+            double irregularRadius = 165
+                    + Math.sin(angle * (2.0 + i * 0.25)) * 20
+                    + Math.sin(angle * (4.6 + i * 0.2)) * 12
+                    + shapeNoise.noise((x + i * 300) * 0.006, (z - i * 300) * 0.006) * 28;
 
-        double edge = irregularRadius - dist;
-        return smooth((edge + 70.0) / 90.0);
+            double edge = irregularRadius - dist;
+            double influence = smooth((edge + 50.0) / 70.0);
+            if (influence > max) {
+                max = influence;
+            }
+        }
+        return max;
     }
 
     public boolean isInsideCity(int x, int z) {
@@ -35,10 +54,14 @@ public class CityGenerator {
             return false;
         }
 
-        AxisSample sampleX = sampleAxis(x + warpX(x, z), LOT_PATTERN_X);
-        AxisSample sampleZ = sampleAxis(z + warpZ(x, z), LOT_PATTERN_Z);
+        int cityIndex = nearestCityIndex(x, z);
+        int localX = x - CITY_CENTERS[cityIndex][0];
+        int localZ = z - CITY_CENTERS[cityIndex][1];
 
-        return sampleX.road || sampleZ.road || isRareCurvedRoad(x, z, influence);
+        AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
+        AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
+
+        return sampleX.road || sampleZ.road || isRareCurvedRoad(localX, localZ, influence, cityIndex);
     }
 
     public boolean isRoadStripe(int x, int z) {
@@ -47,24 +70,31 @@ public class CityGenerator {
             return false;
         }
 
-        AxisSample sampleX = sampleAxis(x + warpX(x, z), LOT_PATTERN_X);
-        AxisSample sampleZ = sampleAxis(z + warpZ(x, z), LOT_PATTERN_Z);
+        int cityIndex = nearestCityIndex(x, z);
+        int localX = x - CITY_CENTERS[cityIndex][0];
+        int localZ = z - CITY_CENTERS[cityIndex][1];
 
-        boolean stripeX = sampleX.road && sampleX.roadOffset == 2 && stripePattern(z);
-        boolean stripeZ = sampleZ.road && sampleZ.roadOffset == 2 && stripePattern(x);
+        AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
+        AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
+
+        boolean stripeX = sampleX.road && sampleX.roadOffset == 2 && stripePattern(localZ);
+        boolean stripeZ = sampleZ.road && sampleZ.roadOffset == 2 && stripePattern(localX);
         return stripeX || stripeZ;
     }
 
-    public boolean isIntersectionNear(int x, int z) {
-        if (!isRoad(x, z)) {
-            return false;
+    private int nearestCityIndex(int x, int z) {
+        int best = 0;
+        long bestDist = Long.MAX_VALUE;
+        for (int i = 0; i < CITY_CENTERS.length; i++) {
+            long dx = x - CITY_CENTERS[i][0];
+            long dz = z - CITY_CENTERS[i][1];
+            long d = dx * dx + dz * dz;
+            if (d < bestDist) {
+                bestDist = d;
+                best = i;
+            }
         }
-        int connections = 0;
-        if (isRoad(x + 1, z)) connections++;
-        if (isRoad(x - 1, z)) connections++;
-        if (isRoad(x, z + 1)) connections++;
-        if (isRoad(x, z - 1)) connections++;
-        return connections >= 3;
+        return best;
     }
 
     private boolean stripePattern(int axisCoord) {
@@ -74,24 +104,24 @@ public class CityGenerator {
         return pos < 2;
     }
 
-    private boolean isRareCurvedRoad(int x, int z, double influence) {
-        if (influence < 0.60) {
+    private boolean isRareCurvedRoad(int x, int z, double influence, int cityIndex) {
+        if (influence < 0.63) {
             return false;
         }
 
-        double curveCenter = Math.sin((x + shapeNoise.noise(x * 0.007, z * 0.007) * 25.0) / 45.0) * 36.0;
+        double curveCenter = Math.sin((x + shapeNoise.noise((x + cityIndex * 200) * 0.008, (z - cityIndex * 200) * 0.008) * 20.0) / 38.0) * 25.0;
         double distance = Math.abs(z - curveCenter);
         boolean nearCurve = distance <= 2.0;
-        double rareGate = Math.abs(shapeNoise.noise((x + 1200) * 0.01, (z - 300) * 0.01));
-        return nearCurve && rareGate < 0.025;
+        double rareGate = Math.abs(shapeNoise.noise((x + 1200 + cityIndex * 100) * 0.015, (z - 300 - cityIndex * 100) * 0.015));
+        return nearCurve && rareGate < 0.02;
     }
 
     private double warpX(int x, int z) {
-        return warpNoise.noise(x * 0.006, z * 0.006) * 6.5;
+        return warpNoise.noise(x * 0.008, z * 0.008) * 5.0;
     }
 
     private double warpZ(int x, int z) {
-        return warpNoise.noise((x + 900) * 0.006, (z - 900) * 0.006) * 6.5;
+        return warpNoise.noise((x + 900) * 0.008, (z - 900) * 0.008) * 5.0;
     }
 
     private AxisSample sampleAxis(double coordinate, int[] pattern) {
