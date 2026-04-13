@@ -2,7 +2,6 @@ package com.islanddayz.generator;
 
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Biome;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
@@ -55,7 +54,6 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     chunkData.setBlock(localX, y, localZ, layer);
                 }
 
-                chunkData.setBiome(localX, localZ, Biome.PLAINS);
             }
         }
     }
