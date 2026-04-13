@@ -12,6 +12,8 @@ import java.util.Random;
 
 public class CustomChunkGenerator extends ChunkGenerator {
     private static final int SEA_LEVEL = 63;
+    private static final int MAX_OCEAN_DEPTH = 33;
+    private static final int BORDER_HALF = 768;
     private static final int SAND_UNDERWATER_START = SEA_LEVEL - 16;
 
     private final IslandGenerator islandGenerator;
@@ -36,7 +38,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 int worldZ = (chunkZ << 4) + localZ;
 
                 double islandMask = islandGenerator.islandMask(worldX, worldZ);
-                fillOceanColumn(chunkData, localX, localZ, worldX, worldZ, islandMask);
+                fillBaseOcean(chunkData, localX, localZ);
                 if (islandMask <= 0.02D) {
                     continue;
                 }
@@ -58,6 +60,19 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     Material layer = pickLayerMaterial(worldX, worldZ, y, topY, islandMask, cityInfluence, topMaterial);
                     chunkData.setBlock(localX, y, localZ, layer);
                 }
+            }
+        }
+
+        // Após gerar a ilha/praia, gera por último a escada praia -> fundo do mar até a borda.
+        for (int localX = 0; localX < 16; localX++) {
+            for (int localZ = 0; localZ < 16; localZ++) {
+                int worldX = (chunkX << 4) + localX;
+                int worldZ = (chunkZ << 4) + localZ;
+                double islandMask = islandGenerator.islandMask(worldX, worldZ);
+                if (islandMask > 0.02D) {
+                    continue;
+                }
+                applyOceanTransitionFromBeach(chunkData, localX, localZ, worldX, worldZ);
             }
         }
     }
@@ -101,7 +116,6 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return y >= sandFloor && y <= topY;
     }
 
-
     private int getCoastStairTop(int worldX, int worldZ, double islandMask, double cityInfluence) {
         if (cityInfluence > 0.05 || islandMask < 0.02 || islandMask > 0.55) {
             return Integer.MIN_VALUE;
@@ -132,39 +146,33 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return Material.GRASS_BLOCK;
     }
 
-    private void fillOceanColumn(ChunkData data, int x, int z, int worldX, int worldZ, double islandMask) {
-        int oceanFloor = computeOceanStairFloor(worldX, worldZ, islandMask);
-
-        for (int y = data.getMinHeight(); y < oceanFloor - 3; y++) {
+    private void fillBaseOcean(ChunkData data, int x, int z) {
+        for (int y = data.getMinHeight(); y <= 39; y++) {
             data.setBlock(x, y, z, Material.STONE);
         }
-
-        for (int y = Math.max(data.getMinHeight(), oceanFloor - 3); y <= oceanFloor; y++) {
-            data.setBlock(x, y, z, Material.SAND);
-        }
-
-        for (int y = oceanFloor + 1; y <= SEA_LEVEL; y++) {
+        for (int y = 40; y <= SEA_LEVEL; y++) {
             data.setBlock(x, y, z, Material.WATER);
         }
     }
 
-    private int computeOceanStairFloor(int worldX, int worldZ, double islandMask) {
-        if (islandMask >= 0.48) {
-            return SEA_LEVEL;
+    private void applyOceanTransitionFromBeach(ChunkData data, int x, int z, int worldX, int worldZ) {
+        double edgeDistance = Math.max(0.0, islandGenerator.distanceFromIslandEdge(worldX, worldZ));
+        int toBorder = Math.max(1, Math.min(BORDER_HALF - Math.abs(worldX), BORDER_HALF - Math.abs(worldZ)));
+        double total = edgeDistance + toBorder;
+        double progress = total <= 0.0 ? 1.0 : edgeDistance / total;
+
+        int floorY = SEA_LEVEL - (int) Math.floor(progress * MAX_OCEAN_DEPTH);
+        int sandStart = Math.max(data.getMinHeight(), floorY - 3);
+
+        for (int y = data.getMinHeight(); y < sandStart; y++) {
+            data.setBlock(x, y, z, Material.STONE);
         }
-
-        double distance = Math.sqrt((double) worldX * worldX + (double) worldZ * worldZ);
-        double beachRadius = 660.0;
-        double borderRadius = 760.0;
-
-        if (distance <= beachRadius) {
-            return SEA_LEVEL;
+        for (int y = sandStart; y <= floorY; y++) {
+            data.setBlock(x, y, z, Material.SAND);
         }
-
-        double progress = Math.max(0.0, Math.min(1.0, (distance - beachRadius) / (borderRadius - beachRadius)));
-        int depth = (int) Math.floor(progress * 33.0);
-
-        return SEA_LEVEL - depth;
+        for (int y = floorY + 1; y <= SEA_LEVEL; y++) {
+            data.setBlock(x, y, z, Material.WATER);
+        }
     }
 
     @Override
