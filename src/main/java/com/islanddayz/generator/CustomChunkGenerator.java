@@ -36,7 +36,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 int worldZ = (chunkZ << 4) + localZ;
 
                 double islandMask = islandGenerator.islandMask(worldX, worldZ);
-                fillOcean(chunkData, localX, localZ);
+                fillOceanColumn(chunkData, localX, localZ, worldX, worldZ);
                 if (islandMask <= 0.02D) {
                     continue;
                 }
@@ -132,13 +132,32 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return Material.GRASS_BLOCK;
     }
 
-    private void fillOcean(ChunkData data, int x, int z) {
-        for (int y = data.getMinHeight(); y <= 39; y++) {
+    private void fillOceanColumn(ChunkData data, int x, int z, int worldX, int worldZ) {
+        int oceanFloor = computeOceanStairFloor(worldX, worldZ);
+
+        for (int y = data.getMinHeight(); y < oceanFloor - 3; y++) {
             data.setBlock(x, y, z, Material.STONE);
         }
-        for (int y = 40; y <= SEA_LEVEL; y++) {
+
+        for (int y = Math.max(data.getMinHeight(), oceanFloor - 3); y <= oceanFloor; y++) {
+            data.setBlock(x, y, z, Material.SAND);
+        }
+
+        for (int y = oceanFloor + 1; y <= SEA_LEVEL; y++) {
             data.setBlock(x, y, z, Material.WATER);
         }
+    }
+
+    private int computeOceanStairFloor(int worldX, int worldZ) {
+        double distance = Math.sqrt((double) worldX * worldX + (double) worldZ * worldZ);
+
+        double startRadius = 760.0;
+        double beachRadius = 660.0;
+        double progress = Math.max(0.0, Math.min(1.0, (startRadius - distance) / (startRadius - beachRadius)));
+
+        int deepFloor = SEA_LEVEL - 33;
+        int steps = (int) Math.floor(progress * 33.0);
+        return Math.min(SEA_LEVEL, deepFloor + steps);
     }
 
     @Override
