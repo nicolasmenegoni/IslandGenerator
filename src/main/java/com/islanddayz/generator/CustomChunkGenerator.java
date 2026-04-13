@@ -257,8 +257,6 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     private static final class StreetLightPopulator extends BlockPopulator {
         private final StreetLightGenerator streetLightGenerator;
-    private final HouseGenerator houseGenerator;
-    private final SimplexNoiseGenerator roadPatchNoise = new SimplexNoiseGenerator(77123L);
 
         private StreetLightPopulator(StreetLightGenerator streetLightGenerator) {
             this.streetLightGenerator = streetLightGenerator;
