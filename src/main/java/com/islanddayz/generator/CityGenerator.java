@@ -25,19 +25,7 @@ public class CityGenerator {
     public double cityInfluence(int x, int z) {
         double max = 0.0;
         for (int i = 0; i < CITY_CENTERS.length; i++) {
-            int cx = CITY_CENTERS[i][0];
-            int cz = CITY_CENTERS[i][1];
-            double localX = x - cx;
-            double localZ = z - cz;
-            double angle = Math.atan2(localZ, localX);
-            double dist = Math.sqrt(localX * localX + localZ * localZ);
-
-            double irregularRadius = 165
-                    + Math.sin(angle * (2.0 + i * 0.25)) * 20
-                    + Math.sin(angle * (4.6 + i * 0.2)) * 12
-                    + shapeNoise.noise((x + i * 300) * 0.006, (z - i * 300) * 0.006) * 28;
-
-            double edge = irregularRadius - dist;
+            double edge = cityEdgeDistance(x, z, i);
             double influence = smooth((edge + 50.0) / 70.0);
             if (influence > max) {
                 max = influence;
@@ -64,6 +52,10 @@ public class CityGenerator {
         int localX = x - CITY_CENTERS[cityIndex][0];
         int localZ = z - CITY_CENTERS[cityIndex][1];
 
+        if (cityEdgeDistance(x, z, cityIndex) < 16.0) {
+            return RoadType.NONE;
+        }
+
         AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
         AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
 
@@ -87,8 +79,30 @@ public class CityGenerator {
         int localX = x - CITY_CENTERS[cityIndex][0];
         int localZ = z - CITY_CENTERS[cityIndex][1];
 
+        if (cityEdgeDistance(x, z, cityIndex) < 16.0) {
+            return false;
+        }
+
         AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
         return sampleX.road && sampleX.roadOffset == 2 && stripePattern(localZ);
+    }
+
+
+    private double cityEdgeDistance(int x, int z, int cityIndex) {
+        int cx = CITY_CENTERS[cityIndex][0];
+        int cz = CITY_CENTERS[cityIndex][1];
+        double localX = x - cx;
+        double localZ = z - cz;
+        double angle = Math.atan2(localZ, localX);
+        double dist = Math.sqrt(localX * localX + localZ * localZ);
+        return irregularRadiusForCity(x, z, angle, cityIndex) - dist;
+    }
+
+    private double irregularRadiusForCity(int x, int z, double angle, int cityIndex) {
+        return 165
+                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 20
+                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 12
+                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 28;
     }
 
     private int nearestCityIndex(int x, int z) {
