@@ -43,6 +43,14 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
                 double cityInfluence = cityGenerator.cityInfluence(worldX, worldZ);
                 int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL, cityInfluence);
+                int coastStairTop = getCoastStairTop(worldX, worldZ, islandMask, cityInfluence);
+                if (coastStairTop > Integer.MIN_VALUE) {
+                    topY = Math.max(topY, coastStairTop);
+                    if (islandMask < 0.38) {
+                        topY = Math.min(topY, coastStairTop + 5);
+                    }
+                }
+
                 boolean insideCity = cityInfluence > 0.12;
                 Material topMaterial = pickTopMaterial(worldX, worldZ, topY, islandMask, insideCity);
 
@@ -84,18 +92,25 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return false;
         }
 
-        int step = Math.max(0, Math.min(20, (int) Math.floor((islandMask - 0.02) * 42.0)));
-        int variation = Math.floorMod(worldX * 29 + worldZ * 11, 4) - 1;
-        int sandFloor = SAND_UNDERWATER_START + step + variation;
-
-        int sandCap = SEA_LEVEL + Math.max(1, step / 4);
-        if (topY <= SEA_LEVEL) {
-            return y >= sandFloor;
+        int coastStairTop = getCoastStairTop(worldX, worldZ, islandMask, cityInfluence);
+        if (coastStairTop == Integer.MIN_VALUE) {
+            return false;
         }
 
-        int inlandDepth = 8 - Math.min(5, step / 3);
-        int inlandCap = Math.max(sandFloor, topY - inlandDepth);
-        return y >= inlandCap && y <= sandCap + 6;
+        int sandFloor = Math.max(SAND_UNDERWATER_START, coastStairTop - 2);
+        return y >= sandFloor && y <= topY;
+    }
+
+
+    private int getCoastStairTop(int worldX, int worldZ, double islandMask, double cityInfluence) {
+        if (cityInfluence > 0.05 || islandMask < 0.02 || islandMask > 0.60) {
+            return Integer.MIN_VALUE;
+        }
+
+        double inland = Math.max(0.0, Math.min(1.0, (islandMask - 0.02) / 0.58));
+        int step = (int) Math.floor(inland * 24.0);
+        int variation = Math.floorMod(worldX * 13 + worldZ * 7, 3) - 1;
+        return SAND_UNDERWATER_START + step + variation;
     }
 
     private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
