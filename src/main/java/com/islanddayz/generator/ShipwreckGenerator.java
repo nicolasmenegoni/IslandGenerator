@@ -8,20 +8,20 @@ public class ShipwreckGenerator {
     private static final int SEA_LEVEL = 63;
 
     public void generateCornerShipwrecks(World world) {
-        placeAtCorner(world, 1, 1, true);
-        placeAtCorner(world, 1, -1, false);
-        placeAtCorner(world, -1, 1, false);
-        placeAtCorner(world, -1, -1, true);
+        placeAtCorner(world, 1, 1);
+        placeAtCorner(world, 1, -1);
+        placeAtCorner(world, -1, 1);
+        placeAtCorner(world, -1, -1);
     }
 
-    private void placeAtCorner(World world, int sx, int sz, boolean withMast) {
+    private void placeAtCorner(World world, int sx, int sz) {
         Location coast = findCoast(world, sx, sz);
         if (coast == null) {
             return;
         }
 
         boolean alongX = Math.abs(coast.getBlockX()) > Math.abs(coast.getBlockZ());
-        buildShipwreck(world, coast, alongX, withMast);
+        buildShipwreck(world, coast, alongX);
     }
 
     private Location findCoast(World world, int sx, int sz) {
@@ -46,7 +46,7 @@ public class ShipwreckGenerator {
                 || world.getBlockAt(x, y, z - 1).getType() == Material.WATER;
     }
 
-    private void buildShipwreck(World world, Location base, boolean alongX, boolean withMast) {
+    private void buildShipwreck(World world, Location base, boolean alongX) {
         int bx = base.getBlockX();
         int by = base.getBlockY();
         int bz = base.getBlockZ();
@@ -62,10 +62,6 @@ public class ShipwreckGenerator {
                 int z = bz + (l * lz) + (w * wz);
                 int hullY = by + Math.max(0, 2 - Math.abs(w));
 
-                if (!withMast && Math.floorMod(l * 3 + w * 5, 7) == 0) {
-                    continue;
-                }
-
                 world.getBlockAt(x, hullY, z).setType(Material.DARK_OAK_PLANKS, false);
                 world.getBlockAt(x, hullY - 1, z).setType(Material.STRIPPED_SPRUCE_LOG, false);
 
@@ -77,19 +73,11 @@ public class ShipwreckGenerator {
 
         int mastX = bx + (1 * lx);
         int mastZ = bz + (1 * lz);
-        if (withMast) {
-            for (int y = by + 1; y <= by + 7; y++) {
-                world.getBlockAt(mastX, y, mastZ).setType(Material.SPRUCE_LOG, false);
-            }
-            world.getBlockAt(mastX + wx, by + 5, mastZ + wz).setType(Material.WHITE_WOOL, false);
-            world.getBlockAt(mastX + wx * 2, by + 5, mastZ + wz * 2).setType(Material.WHITE_WOOL, false);
-            world.getBlockAt(mastX - wx, by + 4, mastZ - wz).setType(Material.WHITE_WOOL, false);
-        } else {
-            for (int y = by + 1; y <= by + 4; y++) {
-                world.getBlockAt(mastX, y, mastZ).setType(Material.SPRUCE_LOG, false);
-            }
-            world.getBlockAt(mastX, by + 5, mastZ).setType(Material.AIR, false);
-            world.getBlockAt(mastX + wx, by + 4, mastZ + wz).setType(Material.CHAIN, false);
+        for (int y = by + 1; y <= by + 7; y++) {
+            world.getBlockAt(mastX, y, mastZ).setType(Material.SPRUCE_LOG, false);
         }
+        world.getBlockAt(mastX + wx, by + 5, mastZ + wz).setType(Material.WHITE_WOOL, false);
+        world.getBlockAt(mastX + wx * 2, by + 5, mastZ + wz * 2).setType(Material.WHITE_WOOL, false);
+        world.getBlockAt(mastX - wx, by + 4, mastZ - wz).setType(Material.WHITE_WOOL, false);
     }
 }

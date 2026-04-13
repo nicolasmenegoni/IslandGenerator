@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.MultipleFacing;
+import org.bukkit.block.data.type.Lantern;
 import org.bukkit.generator.LimitedRegion;
 import org.bukkit.util.Vector;
 
@@ -85,19 +86,25 @@ public class StreetLightGenerator {
 
     private void buildLight(LimitedRegion region, int x, int y, int z, BlockFace roadDirection) {
         region.setType(x, y - 1, z, Material.STONE_BRICKS);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 7; i++) {
             region.setType(x, y + i, z, Material.ANDESITE_WALL);
         }
 
+        int topY = y + 6;
         int bar1X = x + roadDirection.getModX();
         int bar1Z = z + roadDirection.getModZ();
         int bar2X = x + roadDirection.getModX() * 2;
         int bar2Z = z + roadDirection.getModZ() * 2;
 
-        region.setBlockData(bar1X, y + 5, bar1Z, createBarData(roadDirection, roadDirection.getOppositeFace()));
-        region.setBlockData(bar2X, y + 5, bar2Z, createBarData(roadDirection.getOppositeFace()));
-        region.setType(bar2X, y + 4, bar2Z, Material.CHAIN);
-        region.setType(bar2X, y + 3, bar2Z, Material.LANTERN);
+        region.setBlockData(x, topY, z, createBarData(roadDirection));
+        region.setBlockData(bar1X, topY, bar1Z, createBarData(roadDirection, roadDirection.getOppositeFace()));
+        region.setBlockData(bar2X, topY, bar2Z, createBarData(roadDirection.getOppositeFace()));
+
+        region.setType(bar2X, topY - 1, bar2Z, Material.CHAIN);
+
+        Lantern lantern = (Lantern) Bukkit.createBlockData(Material.LANTERN);
+        lantern.setHanging(true);
+        region.setBlockData(bar2X, topY - 2, bar2Z, lantern);
     }
 
     private MultipleFacing createBarData(BlockFace... faces) {

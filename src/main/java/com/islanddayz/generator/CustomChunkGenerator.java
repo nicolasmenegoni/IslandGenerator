@@ -6,6 +6,7 @@ import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.LimitedRegion;
 import org.bukkit.generator.WorldInfo;
+import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 import java.util.List;
 import java.util.Random;
@@ -21,6 +22,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private final CityGenerator cityGenerator;
     private final TreeGenerator treeGenerator;
     private final StreetLightGenerator streetLightGenerator;
+    private final SimplexNoiseGenerator roadPatchNoise = new SimplexNoiseGenerator(77123L);
 
     public CustomChunkGenerator(IslandGenerator islandGenerator, TerrainGenerator terrainGenerator, CityGenerator cityGenerator, TreeGenerator treeGenerator) {
         this.islandGenerator = islandGenerator;
@@ -134,7 +136,9 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 if (cityGenerator.isRoadStripe(x, z)) {
                     return Material.YELLOW_CONCRETE;
                 }
-                return Math.floorMod(x * 17 + z * 23, 29) == 0 ? Material.LIGHT_GRAY_CONCRETE_POWDER : Material.GRAY_CONCRETE;
+                double noise = roadPatchNoise.noise(x * 0.18, z * 0.18);
+                double jitter = (Math.floorMod(x * 734287 + z * 912931, 1000) / 1000.0) * 0.35;
+                return (noise + jitter) > 0.97 ? Material.LIGHT_GRAY_CONCRETE_POWDER : Material.GRAY_CONCRETE;
             }
             if (roadType == CityGenerator.RoadType.DIRT) {
                 return Material.DIRT_PATH;
@@ -237,6 +241,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     private static final class StreetLightPopulator extends BlockPopulator {
         private final StreetLightGenerator streetLightGenerator;
+    private final SimplexNoiseGenerator roadPatchNoise = new SimplexNoiseGenerator(77123L);
 
         private StreetLightPopulator(StreetLightGenerator streetLightGenerator) {
             this.streetLightGenerator = streetLightGenerator;

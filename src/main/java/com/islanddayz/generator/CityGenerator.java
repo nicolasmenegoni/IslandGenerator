@@ -67,10 +67,12 @@ public class CityGenerator {
         AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
         AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
 
-        if (sampleX.road) {
+        boolean cutAtEdge = shouldTerminateNearEdge(localX, localZ, influence, cityIndex);
+
+        if (sampleX.road && !cutAtEdge) {
             return RoadType.MAIN;
         }
-        if (sampleZ.road || isRareCurvedRoad(localX, localZ, influence, cityIndex)) {
+        if ((sampleZ.road && !cutAtEdge) || isRareCurvedRoad(localX, localZ, influence, cityIndex)) {
             return RoadType.DIRT;
         }
         return RoadType.NONE;
@@ -102,6 +104,16 @@ public class CityGenerator {
             }
         }
         return best;
+    }
+
+
+    private boolean shouldTerminateNearEdge(int x, int z, double influence, int cityIndex) {
+        if (influence >= 0.68) {
+            return false;
+        }
+
+        double edgeNoise = shapeNoise.noise((x + cityIndex * 250) * 0.03, (z - cityIndex * 250) * 0.03);
+        return influence < 0.58 && edgeNoise > 0.08;
     }
 
     private boolean stripePattern(int axisCoord) {
