@@ -36,7 +36,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 int worldZ = (chunkZ << 4) + localZ;
 
                 double islandMask = islandGenerator.islandMask(worldX, worldZ);
-                fillOceanColumn(chunkData, localX, localZ, worldX, worldZ);
+                fillOceanColumn(chunkData, localX, localZ, worldX, worldZ, islandMask);
                 if (islandMask <= 0.02D) {
                     continue;
                 }
@@ -132,8 +132,8 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return Material.GRASS_BLOCK;
     }
 
-    private void fillOceanColumn(ChunkData data, int x, int z, int worldX, int worldZ) {
-        int oceanFloor = computeOceanStairFloor(worldX, worldZ);
+    private void fillOceanColumn(ChunkData data, int x, int z, int worldX, int worldZ, double islandMask) {
+        int oceanFloor = computeOceanStairFloor(worldX, worldZ, islandMask);
 
         for (int y = data.getMinHeight(); y < oceanFloor - 3; y++) {
             data.setBlock(x, y, z, Material.STONE);
@@ -148,16 +148,18 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
     }
 
-    private int computeOceanStairFloor(int worldX, int worldZ) {
+    private int computeOceanStairFloor(int worldX, int worldZ, double islandMask) {
+        if (islandMask >= 0.48) {
+            return SEA_LEVEL;
+        }
+
         double distance = Math.sqrt((double) worldX * worldX + (double) worldZ * worldZ);
+        double borderFactor = Math.max(0.35, Math.min(1.0, distance / 760.0));
 
-        double startRadius = 760.0;
-        double beachRadius = 660.0;
-        double progress = Math.max(0.0, Math.min(1.0, (startRadius - distance) / (startRadius - beachRadius)));
+        double fromBeach = Math.max(0.0, Math.min(1.0, (0.48 - islandMask) / 0.48));
+        int depth = (int) Math.floor(33.0 * fromBeach * borderFactor);
 
-        int deepFloor = SEA_LEVEL - 33;
-        int steps = (int) Math.floor(progress * 33.0);
-        return Math.min(SEA_LEVEL, deepFloor + steps);
+        return SEA_LEVEL - depth;
     }
 
     @Override
