@@ -1,7 +1,9 @@
 package com.islanddayz.generator;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.generator.LimitedRegion;
 import org.bukkit.util.Vector;
 
@@ -51,7 +53,6 @@ public class StreetLightGenerator {
             return null;
         }
 
-
         boolean nearJunction = cityGenerator.isRoad(x + 4, z) && cityGenerator.isRoad(x, z + 4)
                 || cityGenerator.isRoad(x - 4, z) && cityGenerator.isRoad(x, z - 4)
                 || cityGenerator.isRoad(x + 4, z) && cityGenerator.isRoad(x, z - 4)
@@ -84,7 +85,7 @@ public class StreetLightGenerator {
 
     private void buildLight(LimitedRegion region, int x, int y, int z, BlockFace roadDirection) {
         region.setType(x, y - 1, z, Material.STONE_BRICKS);
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             region.setType(x, y + i, z, Material.ANDESITE_WALL);
         }
 
@@ -93,9 +94,17 @@ public class StreetLightGenerator {
         int bar2X = x + roadDirection.getModX() * 2;
         int bar2Z = z + roadDirection.getModZ() * 2;
 
-        region.setType(bar1X, y + 4, bar1Z, Material.IRON_BARS);
-        region.setType(bar2X, y + 4, bar2Z, Material.IRON_BARS);
-        region.setType(bar2X, y + 3, bar2Z, Material.CHAIN);
-        region.setType(bar2X, y + 2, bar2Z, Material.LANTERN);
+        region.setBlockData(bar1X, y + 5, bar1Z, createBarData(roadDirection, roadDirection.getOppositeFace()));
+        region.setBlockData(bar2X, y + 5, bar2Z, createBarData(roadDirection.getOppositeFace()));
+        region.setType(bar2X, y + 4, bar2Z, Material.CHAIN);
+        region.setType(bar2X, y + 3, bar2Z, Material.LANTERN);
+    }
+
+    private MultipleFacing createBarData(BlockFace... faces) {
+        MultipleFacing data = (MultipleFacing) Bukkit.createBlockData(Material.IRON_BARS);
+        for (BlockFace face : faces) {
+            data.setFace(face, true);
+        }
+        return data;
     }
 }

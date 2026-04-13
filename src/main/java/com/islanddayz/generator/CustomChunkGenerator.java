@@ -131,7 +131,10 @@ public class CustomChunkGenerator extends ChunkGenerator {
         if (insideCity) {
             CityGenerator.RoadType roadType = cityGenerator.getRoadType(x, z);
             if (roadType == CityGenerator.RoadType.MAIN) {
-                return cityGenerator.isRoadStripe(x, z) ? Material.YELLOW_CONCRETE : Material.GRAY_CONCRETE;
+                if (cityGenerator.isRoadStripe(x, z)) {
+                    return Material.YELLOW_CONCRETE;
+                }
+                return Math.floorMod(x * 17 + z * 23, 29) == 0 ? Material.LIGHT_GRAY_CONCRETE_POWDER : Material.GRAY_CONCRETE;
             }
             if (roadType == CityGenerator.RoadType.DIRT) {
                 return Material.DIRT_PATH;
@@ -139,11 +142,11 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return Material.GRASS_BLOCK;
         }
 
-        if (topY <= SEA_LEVEL + 6 || islandMask < 0.48D) {
+        if (topY <= SEA_LEVEL + 9 || islandMask < 0.52D) {
             return Material.SAND;
         }
 
-        if (topY <= SEA_LEVEL + 12) {
+        if (topY <= SEA_LEVEL + 17) {
             return Material.COARSE_DIRT;
         }
 

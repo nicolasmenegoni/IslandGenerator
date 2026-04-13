@@ -16,8 +16,8 @@ public class CityGenerator {
             {-360, -280}
     };
 
-    private static final int[] LOT_PATTERN_X = {18, 20, 22, 18, 29, 25, 30, 27, 35, 24, 18, 29};
-    private static final int[] LOT_PATTERN_Z = {18, 18, 20, 22, 29, 35, 25, 27, 30, 19, 24, 29};
+    private static final int[] LOT_PATTERN_X = {12, 18, 24, 30, 16, 35, 22, 28, 14, 40, 26, 19, 33};
+    private static final int[] LOT_PATTERN_Z = {15, 27, 20, 34, 18, 38, 12, 29, 25, 41, 17, 31, 22};
 
     private final SimplexNoiseGenerator warpNoise = new SimplexNoiseGenerator(42888L);
     private final SimplexNoiseGenerator shapeNoise = new SimplexNoiseGenerator(90812L);
