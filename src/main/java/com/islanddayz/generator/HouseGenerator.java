@@ -23,12 +23,15 @@ public class HouseGenerator {
         int startZ = chunkZ << 4;
         int centerX = startX + 8;
         int centerZ = startZ + 8;
+        if (!isCenteredLotCandidate(centerX, centerZ)) {
+            return;
+        }
 
         int lotW = 18 + random.nextInt(8);
         int lotL = 18 + random.nextInt(8);
         int minX = centerX - lotW / 2;
         int minZ = centerZ - lotL / 2;
-        if (hasRoadInLot(minX, minZ, lotW, lotL)) {
+        if (!isLotBuildable(region, minX, minZ, lotW, lotL)) {
             return;
         }
 
@@ -40,15 +43,44 @@ public class HouseGenerator {
         buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
     }
 
-    private boolean hasRoadInLot(int minX, int minZ, int w, int l) {
+    private boolean isCenteredLotCandidate(int x, int z) {
+        if (cityGenerator.cityInfluence(x, z) < 0.55 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
+            return false;
+        }
+
+        int north = distanceToRoad(x, z, 0, -1, 48);
+        int south = distanceToRoad(x, z, 0, 1, 48);
+        int west = distanceToRoad(x, z, -1, 0, 48);
+        int east = distanceToRoad(x, z, 1, 0, 48);
+
+        boolean hasRoads = north > 3 && south > 3 && west > 3 && east > 3;
+        boolean balanced = Math.abs(north - south) <= 8 && Math.abs(west - east) <= 8;
+        return hasRoads && balanced;
+    }
+
+    private int distanceToRoad(int x, int z, int stepX, int stepZ, int maxDist) {
+        for (int dist = 1; dist <= maxDist; dist++) {
+            if (cityGenerator.getRoadType(x + stepX * dist, z + stepZ * dist) != CityGenerator.RoadType.NONE) {
+                return dist;
+            }
+        }
+        return maxDist + 1;
+    }
+
+    private boolean isLotBuildable(LimitedRegion region, int minX, int minZ, int w, int l) {
+        int minY = Integer.MAX_VALUE;
+        int maxY = Integer.MIN_VALUE;
         for (int x = minX; x < minX + w; x++) {
             for (int z = minZ; z < minZ + l; z++) {
                 if (cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
-                    return true;
+                    return false;
                 }
+                int y = region.getHighestBlockYAt(x, z);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
             }
         }
-        return false;
+        return (maxY - minY) <= 5;
     }
 
     private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
@@ -70,6 +102,7 @@ public class HouseGenerator {
         clearConstructionVolume(region, x, y, z, w, l, secondFloor ? (floorHeight * 2) + 8 : floorHeight + 8);
         buildAdaptiveFloor(region, x, y, z, w, l, floor);
         buildOuterWalls(region, x, y, z, w, l, floorHeight, wall);
+        decorateOuterWalls(region, random, x, y, z, w, l, floorHeight, wall);
         carveWindows(region, random, x, y, z, w, l, floorHeight, window);
 
         boolean doubleDoor = random.nextDouble() < 0.35;
@@ -139,17 +172,80 @@ public class HouseGenerator {
         }
     }
 
+    private void decorateOuterWalls(LimitedRegion region, Random random, int x, int y, int z, int w, int l, int h, Material wall) {
+        Material beam = random.nextBoolean() ? Material.SPRUCE_LOG : Material.DARK_OAK_LOG;
+        Material base = (wall == Material.BRICKS || wall == Material.ORANGE_TERRACOTTA) ? Material.STONE_BRICKS : Material.COBBLESTONE;
+
+        for (int dx = 0; dx < w; dx++) {
+            region.setType(x + dx, y + 1, z, base);
+            region.setType(x + dx, y + 1, z + l - 1, base);
+        }
+        for (int dz = 0; dz < l; dz++) {
+            region.setType(x, y + 1, z + dz, base);
+            region.setType(x + w - 1, y + 1, z + dz, base);
+        }
+
+        int[] cornerX = {x, x + w - 1, x, x + w - 1};
+        int[] cornerZ = {z, z, z + l - 1, z + l - 1};
+        for (int i = 0; i < cornerX.length; i++) {
+            for (int yy = y + 1; yy <= y + h; yy++) {
+                region.setType(cornerX[i], yy, cornerZ[i], beam);
+            }
+        }
+
+        for (int dx = 2; dx < w - 2; dx += 4) {
+            for (int yy = y + 2; yy <= y + h - 1; yy += 2) {
+                region.setType(x + dx, yy, z, base);
+                region.setType(x + dx, yy, z + l - 1, base);
+            }
+        }
+        for (int dz = 2; dz < l - 2; dz += 4) {
+            for (int yy = y + 2; yy <= y + h - 1; yy += 2) {
+                region.setType(x, yy, z + dz, base);
+                region.setType(x + w - 1, yy, z + dz, base);
+            }
+        }
+    }
+
     private void carveWindows(LimitedRegion region, Random random, int x, int y, int z, int w, int l, int h, Material window) {
         int y1 = y + 2;
         int y2 = Math.min(y + h - 1, y + 3);
+        int wallX = x + (w / 3);
+        int wallZ = z + (l * 2 / 3);
+
+        for (int dx = 2; dx <= w - 3; dx += 4) {
+            int wx = x + dx;
+            if (wx == wallX) {
+                continue;
+            }
+            placeWindowVariant(region, random, wx, y1, y2, z, window, true);
+            placeWindowVariant(region, random, wx, y1, y2, z + l - 1, window, true);
+        }
+
+        for (int dz = 2; dz <= l - 3; dz += 4) {
+            int wz = z + dz;
+            if (wz == wallZ) {
+                continue;
+            }
+            placeWindowVariant(region, random, x, y1, y2, wz, window, false);
+            placeWindowVariant(region, random, x + w - 1, y1, y2, wz, window, false);
+        }
+    }
+
+    private void placeWindowVariant(LimitedRegion region, Random random, int x, int y1, int y2, int z, Material window, boolean alongX) {
+        boolean twoByTwo = random.nextDouble() < 0.35;
+        if (twoByTwo) {
+            int off = alongX ? 1 : 0;
+            int offZ = alongX ? 0 : 1;
+            region.setType(x, y1, z, window);
+            region.setType(x, y2, z, window);
+            region.setType(x + off, y1, z + offZ, window);
+            region.setType(x + off, y2, z + offZ, window);
+            return;
+        }
+
         region.setType(x, y1, z, window);
         region.setType(x, y2, z, window);
-        region.setType(x + w - 1, y1, z, window);
-        region.setType(x + w - 1, y2, z, window);
-        region.setType(x, y1, z + l - 1, window);
-        region.setType(x, y2, z + l - 1, window);
-        region.setType(x + w - 1, y1, z + l - 1, window);
-        region.setType(x + w - 1, y2, z + l - 1, window);
     }
 
     private void placeDoor(LimitedRegion region, int x, int y, int z, int w, Material doorMaterial, boolean doubleDoor) {
@@ -255,17 +351,56 @@ public class HouseGenerator {
                     random.nextBoolean() ? Material.WAXED_OXIDIZED_COPPER : Material.WAXED_EXPOSED_COPPER);
         }
 
-        for (int dx = 2; dx < w - 2; dx++) {
-            for (int dz = 2; dz < l - 2; dz++) {
-                if (random.nextDouble() < 0.65 && region.getType(x + dx, y + 1, z + dz).isAir()) {
-                    region.setType(x + dx, y + 1, z + dz, carpetColor);
-                }
-            }
-        }
+        placeCarpetPattern(region, random, x, y, z, w, l, carpetColor);
 
         region.setType(x + w / 2, y + 4, z + l / 2, Material.LANTERN);
         if (random.nextBoolean()) {
             region.setType(x + 1, y + 3, z + l / 2, Material.WALL_TORCH);
+        }
+    }
+
+    private void placeCarpetPattern(LimitedRegion region, Random random, int x, int y, int z, int w, int l, Material carpetColor) {
+        int centerX = x + w / 2;
+        int centerZ = z + l / 2;
+        int shape = random.nextInt(3);
+
+        if (shape == 0) { // quadrado
+            int half = Math.max(2, Math.min(w, l) / 4);
+            for (int xx = centerX - half; xx <= centerX + half; xx++) {
+                for (int zz = centerZ - half; zz <= centerZ + half; zz++) {
+                    placeCarpetIfAir(region, xx, y + 1, zz, carpetColor);
+                }
+            }
+            return;
+        }
+
+        if (shape == 1) { // retângulo
+            int halfW = Math.max(2, w / 4);
+            int halfL = Math.max(2, l / 5);
+            for (int xx = centerX - halfW; xx <= centerX + halfW; xx++) {
+                for (int zz = centerZ - halfL; zz <= centerZ + halfL; zz++) {
+                    placeCarpetIfAir(region, xx, y + 1, zz, carpetColor);
+                }
+            }
+            return;
+        }
+
+        int radius = Math.max(2, Math.min(w, l) / 4); // circular
+        int r2 = radius * radius;
+        for (int xx = centerX - radius; xx <= centerX + radius; xx++) {
+            for (int zz = centerZ - radius; zz <= centerZ + radius; zz++) {
+                int dx = xx - centerX;
+                int dz = zz - centerZ;
+                if (dx * dx + dz * dz <= r2) {
+                    placeCarpetIfAir(region, xx, y + 1, zz, carpetColor);
+                }
+            }
+        }
+    }
+
+    private void placeCarpetIfAir(LimitedRegion region, int x, int y, int z, Material carpetColor) {
+        if (region.getType(x, y, z).isAir()) {
+            region.setType(x, y, z, carpetColor);
         }
     }
 
