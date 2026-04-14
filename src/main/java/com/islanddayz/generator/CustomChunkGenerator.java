@@ -63,6 +63,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     Material layer = pickLayerMaterial(worldX, worldZ, y, topY, islandMask, cityInfluence, topMaterial);
                     chunkData.setBlock(localX, y, localZ, layer);
                 }
+                carveMountainCaves(chunkData, localX, localZ, worldX, worldZ, topY, islandMask);
             }
         }
 
@@ -139,7 +140,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return Material.GRASS_BLOCK;
         }
 
-        if (topY <= SEA_LEVEL + 9 || islandMask < 0.52D) {
+        if (topY <= SEA_LEVEL + 5 || islandMask < 0.35D) {
             return Material.SAND;
         }
 
@@ -176,6 +177,34 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
         for (int y = floorY + 1; y <= SEA_LEVEL; y++) {
             data.setBlock(x, y, z, Material.WATER);
+        }
+    }
+
+    private void carveMountainCaves(ChunkData data, int localX, int localZ, int worldX, int worldZ, int topY, double islandMask) {
+        if (islandMask < 0.6) {
+            return;
+        }
+        int[][] peaks = {
+                {280, 260, 74},
+                {-320, 180, 72},
+                {250, -300, 76}
+        };
+        for (int[] peak : peaks) {
+            int dx = worldX - peak[0];
+            int dz = worldZ - peak[1];
+            double dist2 = dx * (double) dx + dz * (double) dz;
+            if (dist2 > peak[2] * peak[2]) {
+                continue;
+            }
+            int caveCenterY = SEA_LEVEL + 28;
+            for (int y = caveCenterY - 12; y <= caveCenterY + 8 && y < topY - 2; y++) {
+                double nx = dx / (double) peak[2];
+                double nz = dz / (double) peak[2];
+                double ny = (y - caveCenterY) / 12.0;
+                if ((nx * nx) + (nz * nz) + (ny * ny) < 0.9) {
+                    data.setBlock(localX, y, localZ, Material.AIR);
+                }
+            }
         }
     }
 
