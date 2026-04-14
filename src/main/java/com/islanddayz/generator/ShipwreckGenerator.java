@@ -80,6 +80,10 @@ public class ShipwreckGenerator {
             int z = bz + (l * lz);
             world.getBlockAt(x + wx * 2, by + 1, z + wz * 2).setType(Material.SPRUCE_PLANKS, false);
             world.getBlockAt(x - wx * 2, by + 1, z - wz * 2).setType(Material.SPRUCE_PLANKS, false);
+            if (Math.abs(l) >= 4) {
+                world.getBlockAt(x + wx, by + 2, z + wz).setType(Material.SPRUCE_STAIRS, false);
+                world.getBlockAt(x - wx, by + 2, z - wz).setType(Material.SPRUCE_STAIRS, false);
+            }
         }
 
         int mastX = bx + (1 * lx);
@@ -93,5 +97,6 @@ public class ShipwreckGenerator {
         world.getBlockAt(mastX - wx * 2, by + 5, mastZ - wz * 2).setType(Material.WHITE_WOOL, false);
         world.getBlockAt(mastX + wx, by + 4, mastZ + wz).setType(Material.WHITE_WOOL, false);
         world.getBlockAt(mastX - wx, by + 4, mastZ - wz).setType(Material.WHITE_WOOL, false);
+        world.getBlockAt(mastX + lx * 3, by + 2, mastZ + lz * 3).setType(Material.CHEST, false);
     }
 }

@@ -99,10 +99,10 @@ public class CityGenerator {
     }
 
     private double irregularRadiusForCity(int x, int z, double angle, int cityIndex) {
-        return 135
-                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 14
-                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 8
-                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 18;
+        return 118
+                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 10
+                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 6
+                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 12;
     }
 
     private int nearestCityIndex(int x, int z) {

@@ -6,6 +6,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.type.Bed;
 import org.bukkit.block.data.type.Door;
+import org.bukkit.block.data.type.Ladder;
 import org.bukkit.block.data.type.Stairs;
 import org.bukkit.generator.LimitedRegion;
 
@@ -47,7 +48,7 @@ public class HouseGenerator {
                 buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL);
             }
         }
-    }     
+    }
 
     private boolean isCenteredLotCandidate(int x, int z) {
         if (cityGenerator.cityInfluence(x, z) < 0.5 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
@@ -142,8 +143,12 @@ public class HouseGenerator {
             carveWindows(region, random, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, window);
             buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, doorMaterial, false);
             decorateInterior(region, random, x + 1, secondY, z + 1, w - 2, l - 2);
-            buildStairsBetweenFloors(region, x + 2, y + 1, z + 2, floorHeight - 1);
             buildTriangularRoof(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, roofStair, wall);
+            if (random.nextDouble() < 0.35) {
+                buildLadderBetweenFloors(region, x + 2, y + 1, z + 2, floorHeight);
+            } else {
+                buildStairsBetweenFloors(region, x + 2, y + 1, z + 2, floorHeight);
+            }
         } else {
             buildTriangularRoof(region, x, y + floorHeight, z, w, l, roofStair, wall);
         }
@@ -317,11 +322,24 @@ public class HouseGenerator {
     }
 
     private void buildStairsBetweenFloors(LimitedRegion region, int x, int y, int z, int height) {
-        for (int i = 0; i < height; i++) {
+        for (int i = 0; i <= height; i++) {
             Stairs stair = (Stairs) Bukkit.createBlockData(Material.SPRUCE_STAIRS);
             stair.setFacing(BlockFace.EAST);
             stair.setHalf(Stairs.Half.BOTTOM);
             region.setBlockData(x + i, y + i, z, stair);
+            region.setType(x + i, y + i + 1, z, Material.AIR);
+            region.setType(x + i, y + i + 2, z, Material.AIR);
+        }
+    }
+
+    private void buildLadderBetweenFloors(LimitedRegion region, int x, int y, int z, int height) {
+        for (int i = 0; i <= height; i++) {
+            region.setType(x - 1, y + i, z, Material.SPRUCE_PLANKS);
+            region.setType(x, y + i, z, Material.AIR);
+            region.setType(x, y + i + 1, z, Material.AIR);
+            Ladder ladder = (Ladder) Bukkit.createBlockData(Material.LADDER);
+            ladder.setFacing(BlockFace.EAST);
+            region.setBlockData(x, y + i, z, ladder);
         }
     }
 
@@ -374,8 +392,7 @@ public class HouseGenerator {
 
         placeCarpetPattern(region, random, x, y, z, w, l, carpetColor);
 
-        region.setType(x + w / 2, y + 4, z + l / 2, Material.CHAIN);
-        region.setType(x + w / 2, y + 3, z + l / 2, Material.LANTERN);
+        region.setType(x + w / 2, y + 4, z + l / 2, Material.LANTERN);
         if (random.nextBoolean()) {
             region.setType(x + 1, y + 3, z + l / 2, Material.WALL_TORCH);
         }
@@ -470,12 +487,6 @@ public class HouseGenerator {
             region.setType(stoveX, y, stoveZ + 1, Material.CAULDRON);
         }
 
-        int tableX = x + w / 2;
-        int tableZ = z + l / 2;
-        if (region.getType(tableX, y, tableZ).isAir()) {
-            region.setType(tableX, y, tableZ, Material.OAK_FENCE);
-            region.setType(tableX, y + 1, tableZ, Material.SMOOTH_STONE_SLAB);
-        }
     }
 
     private void placeStorageVariation(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
@@ -498,17 +509,30 @@ public class HouseGenerator {
         if (random.nextDouble() < 0.3) {
             count++;
         }
-        for (int i = 0; i < count; i++) {
-            int[] pos = spots[(i + random.nextInt(spots.length)) % spots.length];
+        int placed = 0;
+        int attempts = 0;
+        while (placed < count && attempts < 16) {
+            int[] pos = spots[random.nextInt(spots.length)];
             Material mat = storage[random.nextInt(storage.length)];
+            attempts++;
             if (!region.getType(pos[0], y, pos[1]).isAir()) {
                 continue;
             }
             region.setType(pos[0], y, pos[1], mat);
+            placed++;
 
             boolean canDouble = (mat == Material.CHEST || mat == Material.TRAPPED_CHEST) && random.nextDouble() < 0.35;
             if (canDouble && region.getType(pos[0] + 1, y, pos[1]).isAir()) {
                 region.setType(pos[0] + 1, y, pos[1], mat);
+            }
+        }
+
+        if (placed == 0) {
+            for (int[] pos : spots) {
+                if (region.getType(pos[0], y, pos[1]).isAir()) {
+                    region.setType(pos[0], y, pos[1], Material.CHEST);
+                    break;
+                }
             }
         }
     }
