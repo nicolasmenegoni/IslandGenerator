@@ -57,13 +57,15 @@ public class TreeGenerator {
                     generateRealisticPalm(region, random, x, y, z);
                 } else if ((ground == Material.GRASS_BLOCK || ground == Material.COARSE_DIRT || ground == Material.DIRT)
                         && random.nextDouble() < 0.68) {
-                    double type = random.nextDouble();
-                    if (type < 0.55) {
-                        generateBroadleaf(region, random, x, y, z);
-                    } else if (type < 0.82) {
-                        generatePine(region, random, x, y, z);
+                    double biomeBand = treeNoise.noise((x + 900) * 0.006, (z - 900) * 0.006);
+                    if (biomeBand < -0.3) {
+                        generatePine(region, random, x, y, z); // área de abeto
+                    } else if (biomeBand < 0.05) {
+                        generateAcacia(region, random, x, y, z); // área de acácia
+                    } else if (biomeBand < 0.35) {
+                        generateBirch(region, random, x, y, z); // área de bétula
                     } else {
-                        generateBranchyTree(region, random, x, y, z);
+                        generateBroadleaf(region, random, x, y, z); // área de carvalho
                     }
                 }
 
@@ -140,6 +142,27 @@ public class TreeGenerator {
                 radius--;
             }
         }
+    }
+
+    private void generateBirch(LimitedRegion region, Random random, int x, int y, int z) {
+        int trunkHeight = 6 + random.nextInt(4);
+        for (int i = 0; i < trunkHeight; i++) {
+            region.setType(x, y + i, z, Material.BIRCH_LOG);
+        }
+        buildBlobCanopy(region, random, x, y + trunkHeight, z, 3, Material.BIRCH_LEAVES);
+    }
+
+    private void generateAcacia(LimitedRegion region, Random random, int x, int y, int z) {
+        int trunkHeight = 5 + random.nextInt(3);
+        int tx = x;
+        int tz = z;
+        for (int i = 0; i < trunkHeight; i++) {
+            if (i > 2 && random.nextDouble() < 0.55) {
+                tx += random.nextBoolean() ? 1 : -1;
+            }
+            region.setType(tx, y + i, tz, Material.ACACIA_LOG);
+        }
+        buildBlobCanopy(region, random, tx, y + trunkHeight, tz, 3, Material.ACACIA_LEAVES);
     }
 
     private void generateRealisticPalm(LimitedRegion region, Random random, int x, int y, int z) {

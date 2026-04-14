@@ -21,6 +21,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private final CityGenerator cityGenerator;
     private final TreeGenerator treeGenerator;
     private final HouseGenerator houseGenerator;
+    private final org.bukkit.util.noise.SimplexNoiseGenerator centerFlattenNoise = new org.bukkit.util.noise.SimplexNoiseGenerator(332211L);
 
     public CustomChunkGenerator(IslandGenerator islandGenerator, TerrainGenerator terrainGenerator, CityGenerator cityGenerator, TreeGenerator treeGenerator) {
         this.islandGenerator = islandGenerator;
@@ -44,9 +45,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 }
 
                 double cityInfluence = cityGenerator.cityInfluence(worldX, worldZ);
-                if ((worldX * worldX) + (worldZ * worldZ) < (170 * 170)) {
-                    cityInfluence = Math.max(cityInfluence, 0.35);
-                }
+                cityInfluence = Math.max(cityInfluence, centerFlattenInfluence(worldX, worldZ));
                 int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL, cityInfluence);
                 int coastStairTop = getCoastStairTop(worldX, worldZ, islandMask, cityInfluence);
                 if (coastStairTop > Integer.MIN_VALUE) {
@@ -205,7 +204,27 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     data.setBlock(localX, y, localZ, Material.AIR);
                 }
             }
+
+            int entryX = peak[0] + peak[2] - 8;
+            int entryZ = peak[1];
+            int tunnelY = SEA_LEVEL + 24;
+            if (Math.abs(worldZ - entryZ) <= 2 && worldX >= entryX - 24 && worldX <= entryX) {
+                for (int y = tunnelY - 3; y <= tunnelY + 3 && y < topY; y++) {
+                    data.setBlock(localX, y, localZ, Material.AIR);
+                }
+            }
         }
+    }
+
+    private double centerFlattenInfluence(int x, int z) {
+        double dist = Math.sqrt((double) x * x + (double) z * z);
+        if (dist > 260) {
+            return 0.0;
+        }
+        double irregular = centerFlattenNoise.noise(x * 0.012, z * 0.012) * 26.0;
+        double edge = 260 + irregular;
+        double blend = Math.max(0.0, Math.min(1.0, (edge - dist) / 120.0));
+        return blend * 0.5;
     }
 
     @Override

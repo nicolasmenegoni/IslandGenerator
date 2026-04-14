@@ -47,8 +47,8 @@ public class HouseGenerator {
                     continue;
                 }
 
-                int lotW = 16 + random.nextInt(4);
-                int lotL = 16 + random.nextInt(4);
+                int lotW = 11 + random.nextInt(3);
+                int lotL = 11 + random.nextInt(3);
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
                 LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
@@ -100,7 +100,7 @@ public class HouseGenerator {
         if ((x * x) + (z * z) < (170 * 170)) {
             return false;
         }
-        if (cityGenerator.cityInfluence(x, z) < 0.45 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
+        if (cityGenerator.cityInfluence(x, z) < 0.3 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
             return false;
         }
 
@@ -108,7 +108,7 @@ public class HouseGenerator {
                 Math.min(distanceToRoad(x, z, 0, -1, 32), distanceToRoad(x, z, 0, 1, 32)),
                 Math.min(distanceToRoad(x, z, -1, 0, 32), distanceToRoad(x, z, 1, 0, 32))
         );
-        return nearest <= 12;
+        return nearest <= 9;
     }
 
     private int distanceToRoad(int x, int z, int stepX, int stepZ, int maxDist) {
