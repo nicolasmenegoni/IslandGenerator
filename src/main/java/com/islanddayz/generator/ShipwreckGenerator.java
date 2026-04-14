@@ -56,19 +56,30 @@ public class ShipwreckGenerator {
         int wx = alongX ? 0 : 1;
         int wz = alongX ? 1 : 0;
 
-        for (int l = -5; l <= 6; l++) {
+        for (int l = -6; l <= 7; l++) {
             for (int w = -2; w <= 2; w++) {
                 int x = bx + (l * lx) + (w * wx);
                 int z = bz + (l * lz) + (w * wz);
-                int hullY = by + Math.max(0, 2 - Math.abs(w));
+                int taper = Math.max(0, Math.abs(l) - 4);
+                if (Math.abs(w) > 2 - Math.min(1, taper)) {
+                    continue;
+                }
+                int hullY = by + Math.max(0, 2 - Math.abs(w)) - (taper > 0 ? 1 : 0);
 
-                world.getBlockAt(x, hullY, z).setType(Material.DARK_OAK_PLANKS, false);
-                world.getBlockAt(x, hullY - 1, z).setType(Material.STRIPPED_SPRUCE_LOG, false);
+                world.getBlockAt(x, hullY, z).setType(Material.SPRUCE_PLANKS, false);
+                world.getBlockAt(x, hullY - 1, z).setType(Material.OAK_LOG, false);
 
-                if (Math.abs(w) <= 1 && Math.floorMod(l + 12, 3) == 0) {
+                if (Math.abs(w) <= 1 && Math.floorMod(l + 14, 3) == 0) {
                     world.getBlockAt(x, hullY + 1, z).setType(Material.SPRUCE_SLAB, false);
                 }
             }
+        }
+
+        for (int l = -4; l <= 5; l++) {
+            int x = bx + (l * lx);
+            int z = bz + (l * lz);
+            world.getBlockAt(x + wx * 2, by + 1, z + wz * 2).setType(Material.SPRUCE_PLANKS, false);
+            world.getBlockAt(x - wx * 2, by + 1, z - wz * 2).setType(Material.SPRUCE_PLANKS, false);
         }
 
         int mastX = bx + (1 * lx);
@@ -78,6 +89,9 @@ public class ShipwreckGenerator {
         }
         world.getBlockAt(mastX + wx, by + 5, mastZ + wz).setType(Material.WHITE_WOOL, false);
         world.getBlockAt(mastX + wx * 2, by + 5, mastZ + wz * 2).setType(Material.WHITE_WOOL, false);
+        world.getBlockAt(mastX - wx, by + 5, mastZ - wz).setType(Material.WHITE_WOOL, false);
+        world.getBlockAt(mastX - wx * 2, by + 5, mastZ - wz * 2).setType(Material.WHITE_WOOL, false);
+        world.getBlockAt(mastX + wx, by + 4, mastZ + wz).setType(Material.WHITE_WOOL, false);
         world.getBlockAt(mastX - wx, by + 4, mastZ - wz).setType(Material.WHITE_WOOL, false);
     }
 }

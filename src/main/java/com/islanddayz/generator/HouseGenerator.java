@@ -21,7 +21,7 @@ public class HouseGenerator {
     public void populateChunk(LimitedRegion region, int chunkX, int chunkZ, Random random) {
         int startX = chunkX << 4;
         int startZ = chunkZ << 4;
-        int[] slots = {4, 12};
+        int[] slots = {2, 6, 10, 14};
         for (int localX : slots) {
             for (int localZ : slots) {
                 int centerX = startX + localX;
@@ -47,10 +47,10 @@ public class HouseGenerator {
                 buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL);
             }
         }
-    }
+    }     
 
     private boolean isCenteredLotCandidate(int x, int z) {
-        if (cityGenerator.cityInfluence(x, z) < 0.55 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
+        if (cityGenerator.cityInfluence(x, z) < 0.5 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
             return false;
         }
 
@@ -60,7 +60,7 @@ public class HouseGenerator {
         int east = distanceToRoad(x, z, 1, 0, 48);
 
         boolean hasRoads = north > 3 && south > 3 && west > 3 && east > 3;
-        boolean balanced = Math.abs(north - south) <= 8 && Math.abs(west - east) <= 8;
+        boolean balanced = Math.abs(north - south) <= 10 && Math.abs(west - east) <= 10;
         return hasRoads && balanced;
     }
 
@@ -86,8 +86,8 @@ public class HouseGenerator {
                 maxY = Math.max(maxY, y);
             }
         }
-        boolean nearCityEdge = cityGenerator.cityInfluence(centerX, centerZ) < 0.62;
-        boolean tooSteep = (maxY - minY) > 4;
+        boolean nearCityEdge = cityGenerator.cityInfluence(centerX, centerZ) < 0.56;
+        boolean tooSteep = (maxY - minY) > 6;
         return new LotInfo(!nearCityEdge && !tooSteep, minY, maxY);
     }
 
@@ -101,7 +101,6 @@ public class HouseGenerator {
 
         for (int x = minX; x < minX + w; x++) {
             for (int z = minZ; z < minZ + l; z++) {
-                region.setType(x, baseY, z, Material.DIRT);
                 for (int yy = baseY + 1; yy <= topY; yy++) {
                     region.setType(x, yy, z, Material.AIR);
                 }
@@ -126,7 +125,7 @@ public class HouseGenerator {
         boolean secondFloor = random.nextDouble() < 0.35;
 
         clearConstructionVolume(region, x, y, z, w, l, secondFloor ? (floorHeight * 2) + 8 : floorHeight + 8);
-        buildAdaptiveFloor(region, x, y, z, w, l, floor);
+        buildAdaptiveFloor(region, x, y, z, w, l, floor, true);
         buildOuterWalls(region, x, y, z, w, l, floorHeight, wall);
         decorateOuterWalls(region, random, x, y, z, w, l, floorHeight, wall);
         carveWindows(region, random, x, y, z, w, l, floorHeight, window);
@@ -138,7 +137,7 @@ public class HouseGenerator {
 
         if (secondFloor) {
             int secondY = y + floorHeight;
-            buildAdaptiveFloor(region, x + 1, secondY, z + 1, w - 2, l - 2, floorChoices[random.nextInt(floorChoices.length)]);
+            buildAdaptiveFloor(region, x + 1, secondY, z + 1, w - 2, l - 2, floorChoices[random.nextInt(floorChoices.length)], false);
             buildOuterWalls(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall);
             carveWindows(region, random, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, window);
             buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, doorMaterial, false);
@@ -171,14 +170,16 @@ public class HouseGenerator {
         }
     }
 
-    private void buildAdaptiveFloor(LimitedRegion region, int x, int y, int z, int w, int l, Material floor) {
+    private void buildAdaptiveFloor(LimitedRegion region, int x, int y, int z, int w, int l, Material floor, boolean fillBelow) {
         for (int dx = 0; dx < w; dx++) {
             for (int dz = 0; dz < l; dz++) {
                 int wx = x + dx;
                 int wz = z + dz;
-                int groundY = region.getHighestBlockYAt(wx, wz) - 1;
-                for (int yy = groundY + 1; yy < y; yy++) {
-                    region.setType(wx, yy, wz, Material.DIRT);
+                if (fillBelow) {
+                    int groundY = region.getHighestBlockYAt(wx, wz) - 1;
+                    for (int yy = groundY + 1; yy < y; yy++) {
+                        region.setType(wx, yy, wz, Material.DIRT);
+                    }
                 }
                 region.setType(wx, y, wz, floor);
             }
@@ -364,22 +365,17 @@ public class HouseGenerator {
     private void decorateInterior(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
         Material[] carpets = {Material.RED_CARPET, Material.GREEN_CARPET, Material.CYAN_CARPET, Material.GRAY_CARPET};
         Material carpetColor = carpets[random.nextInt(carpets.length)];
+        int roomY = y + 1;
 
-        region.setType(x + 2, y + 1, z + 2, Material.CRAFTING_TABLE);
-        region.setType(x + w - 3, y + 1, z + 2, Material.FURNACE);
-        region.setType(x + w - 4, y + 1, z + 2, random.nextBoolean() ? Material.CHEST : Material.BARREL);
-
-        placeBed(region, x + 2, y + 1, z + l - 4, BlockFace.SOUTH);
-
-        region.setType(x + w - 3, y + 1, z + l - 3, Material.CAULDRON);
-        if (random.nextBoolean()) {
-            region.setType(x + w - 4, y + 1, z + l - 3,
-                    random.nextBoolean() ? Material.WAXED_OXIDIZED_COPPER : Material.WAXED_EXPOSED_COPPER);
-        }
+        placeCornerWorkTable(region, random, x, roomY, z, w, l);
+        placeKitchen(region, x, roomY, z, w, l);
+        placeBed(region, x + 2, roomY, z + l - 4, BlockFace.SOUTH);
+        placeStorageVariation(region, random, x, roomY, z, w, l);
 
         placeCarpetPattern(region, random, x, y, z, w, l, carpetColor);
 
-        region.setType(x + w / 2, y + 4, z + l / 2, Material.LANTERN);
+        region.setType(x + w / 2, y + 4, z + l / 2, Material.CHAIN);
+        region.setType(x + w / 2, y + 3, z + l / 2, Material.LANTERN);
         if (random.nextBoolean()) {
             region.setType(x + 1, y + 3, z + l / 2, Material.WALL_TORCH);
         }
@@ -446,6 +442,80 @@ public class HouseGenerator {
 
         region.setBlockData(x, y, z, foot);
         region.setBlockData(hx, y, hz, head);
+    }
+
+    private void placeCornerWorkTable(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
+        int[][] corners = {
+                {x + 2, z + 2},
+                {x + w - 3, z + 2},
+                {x + 2, z + l - 3},
+                {x + w - 3, z + l - 3}
+        };
+        int[] pick = corners[random.nextInt(corners.length)];
+        if (region.getType(pick[0], y, pick[1]).isAir()) {
+            region.setType(pick[0], y, pick[1], Material.CRAFTING_TABLE);
+        }
+    }
+
+    private void placeKitchen(LimitedRegion region, int x, int y, int z, int w, int l) {
+        int stoveX = x + w - 3;
+        int stoveZ = z + 2;
+        if (region.getType(stoveX, y, stoveZ).isAir()) {
+            region.setType(stoveX, y, stoveZ, Material.FURNACE);
+        }
+        if (region.getType(stoveX - 1, y, stoveZ).isAir()) {
+            region.setType(stoveX - 1, y, stoveZ, Material.SMOKER);
+        }
+        if (region.getType(stoveX, y, stoveZ + 1).isAir()) {
+            region.setType(stoveX, y, stoveZ + 1, Material.CAULDRON);
+        }
+
+        int tableX = x + w / 2;
+        int tableZ = z + l / 2;
+        if (region.getType(tableX, y, tableZ).isAir()) {
+            region.setType(tableX, y, tableZ, Material.OAK_FENCE);
+            region.setType(tableX, y + 1, tableZ, Material.SMOOTH_STONE_SLAB);
+        }
+    }
+
+    private void placeStorageVariation(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
+        Material[] storage = {
+                Material.CHEST,
+                Material.BARREL,
+                Material.TRAPPED_CHEST,
+                fallbackMaterial("COPPER_CHEST", Material.CHEST),
+                fallbackMaterial("WAXED_COPPER_CHEST", Material.BARREL)
+        };
+
+        int[][] spots = {
+                {x + 2, z + l - 3},
+                {x + w - 3, z + l - 3},
+                {x + w - 3, z + 3},
+                {x + 3, z + 2}
+        };
+
+        int count = 1 + random.nextInt(2);
+        if (random.nextDouble() < 0.3) {
+            count++;
+        }
+        for (int i = 0; i < count; i++) {
+            int[] pos = spots[(i + random.nextInt(spots.length)) % spots.length];
+            Material mat = storage[random.nextInt(storage.length)];
+            if (!region.getType(pos[0], y, pos[1]).isAir()) {
+                continue;
+            }
+            region.setType(pos[0], y, pos[1], mat);
+
+            boolean canDouble = (mat == Material.CHEST || mat == Material.TRAPPED_CHEST) && random.nextDouble() < 0.35;
+            if (canDouble && region.getType(pos[0] + 1, y, pos[1]).isAir()) {
+                region.setType(pos[0] + 1, y, pos[1], mat);
+            }
+        }
+    }
+
+    private Material fallbackMaterial(String name, Material fallback) {
+        Material material = Material.matchMaterial(name);
+        return material != null ? material : fallback;
     }
 
     private record LotInfo(boolean buildable, int minY, int maxY) {
