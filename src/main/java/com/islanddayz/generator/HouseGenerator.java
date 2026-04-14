@@ -104,14 +104,11 @@ public class HouseGenerator {
             return false;
         }
 
-        int north = distanceToRoad(x, z, 0, -1, 48);
-        int south = distanceToRoad(x, z, 0, 1, 48);
-        int west = distanceToRoad(x, z, -1, 0, 48);
-        int east = distanceToRoad(x, z, 1, 0, 48);
-
-        boolean hasRoads = north <= 14 || south <= 14 || west <= 14 || east <= 14;
-        boolean balanced = Math.abs(north - south) <= 24 && Math.abs(west - east) <= 24;
-        return hasRoads && balanced;
+        int nearest = Math.min(
+                Math.min(distanceToRoad(x, z, 0, -1, 32), distanceToRoad(x, z, 0, 1, 32)),
+                Math.min(distanceToRoad(x, z, -1, 0, 32), distanceToRoad(x, z, 1, 0, 32))
+        );
+        return nearest <= 12;
     }
 
     private int distanceToRoad(int x, int z, int stepX, int stepZ, int maxDist) {

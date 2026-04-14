@@ -53,7 +53,7 @@ public class TreeGenerator {
                     continue;
                 }
 
-                if (ground == Material.SAND && random.nextDouble() < 0.82) {
+                if (ground == Material.SAND && mask < 0.42 && random.nextDouble() < 0.82) {
                     generateRealisticPalm(region, random, x, y, z);
                 } else if ((ground == Material.GRASS_BLOCK || ground == Material.COARSE_DIRT || ground == Material.DIRT)
                         && random.nextDouble() < 0.68) {
