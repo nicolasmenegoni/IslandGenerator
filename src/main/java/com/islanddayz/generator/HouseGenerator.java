@@ -47,7 +47,7 @@ public class HouseGenerator {
                 buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL);
             }
         }
-    }
+    }     
 
     private boolean isCenteredLotCandidate(int x, int z) {
         if (cityGenerator.cityInfluence(x, z) < 0.5 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
