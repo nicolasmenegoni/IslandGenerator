@@ -25,18 +25,26 @@ public class HouseGenerator {
     public void populateChunk(LimitedRegion region, int chunkX, int chunkZ, Random random) {
         int startX = chunkX << 4;
         int startZ = chunkZ << 4;
-        int[] slots = {2, 4, 6, 8, 10, 12, 14};
+        int endX = startX + 15;
+        int endZ = startZ + 15;
         List<int[]> occupiedLots = new ArrayList<>();
-        for (int localX : slots) {
-            for (int localZ : slots) {
-                int centerX = startX + localX;
-                int centerZ = startZ + localZ;
+
+        for (int villageIndex = 0; villageIndex < cityGenerator.villageCount(); villageIndex++) {
+            int cx = cityGenerator.villageCenterX(villageIndex);
+            int cz = cityGenerator.villageCenterZ(villageIndex);
+            int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
+            for (int[] plot : plots) {
+                int centerX = cx + plot[0];
+                int centerZ = cz + plot[1];
+                if (centerX < startX || centerX > endX || centerZ < startZ || centerZ > endZ) {
+                    continue;
+                }
                 if (!isCenteredLotCandidate(centerX, centerZ)) {
                     continue;
                 }
 
-                int lotW = 18 + random.nextInt(7);
-                int lotL = 18 + random.nextInt(7);
+                int lotW = 16 + random.nextInt(4);
+                int lotL = 16 + random.nextInt(4);
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
                 LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
@@ -56,6 +64,20 @@ public class HouseGenerator {
                 occupiedLots.add(new int[]{minX, minZ, minX + lotW - 1, minZ + lotL - 1});
             }
         }
+    }
+
+    private int[][] villagePlots(int pattern) {
+        return switch (pattern) {
+            case 0 -> new int[][]{
+                    {6, -26}, {8, -14}, {-8, -10}, {6, 2}, {-14, 12}, {16, 26}
+            };
+            case 1 -> new int[][]{
+                    {-8, -22}, {8, -24}, {-8, -10}, {8, -8}, {-8, 2}, {10, 14}
+            };
+            default -> new int[][]{
+                    {-10, -18}, {10, -18}, {-8, -4}, {8, -2}, {-12, 14}, {10, 14}
+            };
+        };
     }
 
     private boolean intersectsOccupiedLot(List<int[]> occupiedLots, int minX, int minZ, int w, int l) {

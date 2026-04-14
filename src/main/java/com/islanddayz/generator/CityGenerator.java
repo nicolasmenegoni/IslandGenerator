@@ -41,6 +41,22 @@ public class CityGenerator {
         return getRoadType(x, z) != RoadType.NONE;
     }
 
+    public int villageCount() {
+        return CITY_CENTERS.length;
+    }
+
+    public int villageCenterX(int index) {
+        return CITY_CENTERS[index][0];
+    }
+
+    public int villageCenterZ(int index) {
+        return CITY_CENTERS[index][1];
+    }
+
+    public int villagePattern(int index) {
+        return Math.floorMod(index, 3);
+    }
+
     public RoadType getRoadType(int x, int z) {
         double influence = cityInfluence(x, z);
         if (influence <= 0.52) {
@@ -57,22 +73,34 @@ public class CityGenerator {
         double wx = localX + warpX(localX, localZ);
         double wz = localZ + warpZ(localX, localZ);
 
-        if ((cityIndex & 1) == 0) {
-            boolean primary = Math.abs(wx) <= 1.3;
-            boolean parallels = Math.abs(wx - 6) <= 1.3 || Math.abs(wx + 6) <= 1.3
-                    || Math.abs(wx - 12) <= 1.3 || Math.abs(wx + 12) <= 1.3;
-            boolean withinVillage = Math.abs(wz) <= 34;
-            return (withinVillage && (primary || parallels)) ? RoadType.DIRT : RoadType.NONE;
-        }
-
-        boolean vertical = Math.abs(wx) <= 1.3 && wz >= -34 && wz <= 34;
-        boolean horizontal = Math.abs(wz) <= 1.3 && wx >= -34 && wx <= 34;
-        boolean extraLeg = Math.abs(wz - 8) <= 1.3 && wx >= -22 && wx <= 18;
-        return (vertical || horizontal || extraLeg) ? RoadType.DIRT : RoadType.NONE;
+        int pattern = villagePattern(cityIndex);
+        boolean onRoad = isOnVillageRoad(pattern, wx, wz);
+        return onRoad ? RoadType.DIRT : RoadType.NONE;
     }
 
     public boolean isRoadStripe(int x, int z) {
         return false;
+    }
+
+    private boolean isOnVillageRoad(int pattern, double x, double z) {
+        boolean main = Math.abs(x) <= 1.3 && z >= -34 && z <= 34;
+        if (!main && pattern == 0) {
+            boolean b1 = Math.abs(z + 12) <= 1.3 && x >= -24 && x <= 0;
+            boolean b2 = Math.abs(z - 6) <= 1.3 && x >= 0 && x <= 18;
+            boolean b3 = Math.abs(z - 22) <= 1.3 && x >= 0 && x <= 24;
+            return b1 || b2 || b3;
+        }
+        if (!main && pattern == 1) {
+            boolean b1 = Math.abs(z - 10) <= 1.3 && x >= -8 && x <= 26;
+            boolean b2 = Math.abs(z + 4) <= 1.3 && x >= 0 && x <= 16;
+            return b1 || b2;
+        }
+        if (!main && pattern == 2) {
+            boolean b1 = Math.abs(z + 16) <= 1.3 && x >= -24 && x <= 24;
+            boolean b2 = Math.abs(z - 12) <= 1.3 && x >= -26 && x <= 26;
+            return b1 || b2;
+        }
+        return main;
     }
 
 
