@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.type.Bed;
 import org.bukkit.block.data.type.Door;
 import org.bukkit.block.data.type.Ladder;
@@ -133,6 +134,7 @@ public class HouseGenerator {
 
         boolean doubleDoor = random.nextDouble() < 0.35;
         placeDoor(region, x, y, z, w, doorMaterial, doubleDoor);
+        ensureFrontDoorStep(region, x, y, z, w);
         buildInteriorRooms(region, x, y, z, w, l, floorHeight, wall, doorMaterial, doubleDoor);
         decorateInterior(region, random, x, y, z, w, l);
 
@@ -201,6 +203,14 @@ public class HouseGenerator {
                     region.setType(x + dx, y + dy, z + dz, wall);
                 }
             }
+        }
+        for (int dx = 0; dx < w; dx++) {
+            region.setType(x + dx, y, z, wall);
+            region.setType(x + dx, y, z + l - 1, wall);
+        }
+        for (int dz = 0; dz < l; dz++) {
+            region.setType(x, y, z + dz, wall);
+            region.setType(x + w - 1, y, z + dz, wall);
         }
     }
 
@@ -288,6 +298,19 @@ public class HouseGenerator {
         }
     }
 
+    private void ensureFrontDoorStep(LimitedRegion region, int x, int y, int z, int w) {
+        int doorX = x + (w / 2);
+        int stepX = doorX;
+        int stepY = y;
+        int stepZ = z - 1;
+        if (region.getType(stepX, stepY, stepZ).isAir()) {
+            Stairs step = (Stairs) Bukkit.createBlockData(Material.STONE_BRICK_STAIRS);
+            step.setFacing(BlockFace.SOUTH);
+            step.setHalf(Stairs.Half.BOTTOM);
+            region.setBlockData(stepX, stepY, stepZ, step);
+        }
+    }
+
     private void setDoor(LimitedRegion region, int x, int y, int z, Material mat, BlockFace facing, boolean hingeRight) {
         Door lower = (Door) Bukkit.createBlockData(mat);
         lower.setHalf(Bisected.Half.BOTTOM);
@@ -322,7 +345,7 @@ public class HouseGenerator {
     }
 
     private void buildStairsBetweenFloors(LimitedRegion region, int x, int y, int z, int height) {
-        for (int i = 0; i <= height; i++) {
+        for (int i = 0; i < height; i++) {
             Stairs stair = (Stairs) Bukkit.createBlockData(Material.SPRUCE_STAIRS);
             stair.setFacing(BlockFace.EAST);
             stair.setHalf(Stairs.Half.BOTTOM);
@@ -387,7 +410,8 @@ public class HouseGenerator {
 
         placeCornerWorkTable(region, random, x, roomY, z, w, l);
         placeKitchen(region, x, roomY, z, w, l);
-        placeBed(region, x + 2, roomY, z + l - 4, BlockFace.SOUTH);
+        placeBedroomBeds(region, random, x, roomY, z, w, l);
+        placeBookshelves(region, random, x, roomY, z, w, l);
         placeStorageVariation(region, random, x, roomY, z, w, l);
 
         placeCarpetPattern(region, random, x, y, z, w, l, carpetColor);
@@ -443,24 +467,6 @@ public class HouseGenerator {
         }
     }
 
-    private void placeBed(LimitedRegion region, int x, int y, int z, BlockFace facing) {
-        int hx = x + facing.getModX();
-        int hz = z + facing.getModZ();
-        if (!region.getType(x, y, z).isAir() || !region.getType(hx, y, hz).isAir()) {
-            return;
-        }
-
-        Bed foot = (Bed) Bukkit.createBlockData(Material.RED_BED);
-        foot.setPart(Bed.Part.FOOT);
-        foot.setFacing(facing);
-        Bed head = (Bed) Bukkit.createBlockData(Material.RED_BED);
-        head.setPart(Bed.Part.HEAD);
-        head.setFacing(facing);
-
-        region.setBlockData(x, y, z, foot);
-        region.setBlockData(hx, y, hz, head);
-    }
-
     private void placeCornerWorkTable(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
         int[][] corners = {
                 {x + 2, z + 2},
@@ -478,10 +484,7 @@ public class HouseGenerator {
         int stoveX = x + w - 3;
         int stoveZ = z + 2;
         if (region.getType(stoveX, y, stoveZ).isAir()) {
-            region.setType(stoveX, y, stoveZ, Material.FURNACE);
-        }
-        if (region.getType(stoveX - 1, y, stoveZ).isAir()) {
-            region.setType(stoveX - 1, y, stoveZ, Material.SMOKER);
+            setFacingBlock(region, stoveX, y, stoveZ, Material.FURNACE, BlockFace.WEST);
         }
         if (region.getType(stoveX, y, stoveZ + 1).isAir()) {
             region.setType(stoveX, y, stoveZ + 1, Material.CAULDRON);
@@ -518,7 +521,7 @@ public class HouseGenerator {
             if (!region.getType(pos[0], y, pos[1]).isAir()) {
                 continue;
             }
-            region.setType(pos[0], y, pos[1], mat);
+            setFacingBlock(region, pos[0], y, pos[1], mat, BlockFace.WEST);
             placed++;
 
             boolean canDouble = (mat == Material.CHEST || mat == Material.TRAPPED_CHEST) && random.nextDouble() < 0.35;
@@ -530,7 +533,7 @@ public class HouseGenerator {
         if (placed == 0) {
             for (int[] pos : spots) {
                 if (region.getType(pos[0], y, pos[1]).isAir()) {
-                    region.setType(pos[0], y, pos[1], Material.CHEST);
+                    setFacingBlock(region, pos[0], y, pos[1], Material.CHEST, BlockFace.WEST);
                     break;
                 }
             }
@@ -540,6 +543,81 @@ public class HouseGenerator {
     private Material fallbackMaterial(String name, Material fallback) {
         Material material = Material.matchMaterial(name);
         return material != null ? material : fallback;
+    }
+
+    private void placeBedroomBeds(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
+        Material[] bedColors = {
+                Material.RED_BED, Material.BLUE_BED, Material.GREEN_BED, Material.YELLOW_BED,
+                Material.WHITE_BED, Material.GRAY_BED, Material.CYAN_BED, Material.ORANGE_BED
+        };
+        Material bedMaterial = bedColors[random.nextInt(bedColors.length)];
+        int bx = x + 2;
+        int bz = z + l - 4;
+        if (canPlaceBed(region, bx, y, bz, BlockFace.SOUTH)) {
+            placeBed(region, bx, y, bz, BlockFace.SOUTH, bedMaterial);
+        } else if (canPlaceBed(region, x + w - 3, y, z + l - 4, BlockFace.SOUTH)) {
+            placeBed(region, x + w - 3, y, z + l - 4, BlockFace.SOUTH, bedMaterial);
+            bx = x + w - 3;
+            bz = z + l - 4;
+        }
+
+        if (random.nextDouble() < 0.35) {
+            int secondX = bx + 1;
+            if (canPlaceBed(region, secondX, y, bz, BlockFace.SOUTH)) {
+                placeBed(region, secondX, y, bz, BlockFace.SOUTH, bedMaterial);
+            }
+        }
+    }
+
+    private void placeBookshelves(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
+        int[][] shelfSpots = {
+                {x + 1, z + 3},
+                {x + w - 2, z + 3},
+                {x + 1, z + l - 4},
+                {x + w - 2, z + l - 4}
+        };
+        int shelves = random.nextDouble() < 0.4 ? 2 : 1;
+        int placed = 0;
+        for (int i = 0; i < shelfSpots.length && placed < shelves; i++) {
+            int[] spot = shelfSpots[(i + random.nextInt(shelfSpots.length)) % shelfSpots.length];
+            if (region.getType(spot[0], y, spot[1]).isAir()) {
+                region.setType(spot[0], y, spot[1], Material.BOOKSHELF);
+                placed++;
+            }
+        }
+    }
+
+    private boolean canPlaceBed(LimitedRegion region, int x, int y, int z, BlockFace facing) {
+        int hx = x + facing.getModX();
+        int hz = z + facing.getModZ();
+        return region.getType(x, y, z).isAir() && region.getType(hx, y, hz).isAir();
+    }
+
+    private void placeBed(LimitedRegion region, int x, int y, int z, BlockFace facing, Material bedMaterial) {
+        int hx = x + facing.getModX();
+        int hz = z + facing.getModZ();
+        if (!canPlaceBed(region, x, y, z, facing)) {
+            return;
+        }
+
+        Bed foot = (Bed) Bukkit.createBlockData(bedMaterial);
+        foot.setPart(Bed.Part.FOOT);
+        foot.setFacing(facing);
+        Bed head = (Bed) Bukkit.createBlockData(bedMaterial);
+        head.setPart(Bed.Part.HEAD);
+        head.setFacing(facing);
+
+        region.setBlockData(x, y, z, foot);
+        region.setBlockData(hx, y, hz, head);
+    }
+
+    private void setFacingBlock(LimitedRegion region, int x, int y, int z, Material material, BlockFace facing) {
+        if (!(Bukkit.createBlockData(material) instanceof Directional directional)) {
+            region.setType(x, y, z, material);
+            return;
+        }
+        directional.setFacing(facing);
+        region.setBlockData(x, y, z, directional);
     }
 
     private record LotInfo(boolean buildable, int minY, int maxY) {

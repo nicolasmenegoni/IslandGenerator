@@ -15,6 +15,9 @@ public class CityGenerator {
             {220, 330},
             {-360, -280}
     };
+    private static final int[][] CITY_LINKS = {
+            {0, 1}, {0, 2}, {0, 3}, {0, 4}
+    };
 
     private static final int[] LOT_PATTERN_X = {12, 18, 24, 30, 16, 35, 22, 28, 14, 40, 26, 19, 33};
     private static final int[] LOT_PATTERN_Z = {15, 27, 20, 34, 18, 38, 12, 29, 25, 41, 17, 31, 22};
@@ -43,6 +46,10 @@ public class CityGenerator {
     }
 
     public RoadType getRoadType(int x, int z) {
+        if (isInterCityConnector(x, z)) {
+            return RoadType.MAIN;
+        }
+
         double influence = cityInfluence(x, z);
         if (influence <= 0.45) {
             return RoadType.NONE;
@@ -185,6 +192,34 @@ public class CityGenerator {
     private double smooth(double value) {
         double v = Math.max(0, Math.min(1, value));
         return v * v * (3 - 2 * v);
+    }
+
+    private boolean isInterCityConnector(int x, int z) {
+        for (int[] link : CITY_LINKS) {
+            int[] a = CITY_CENTERS[link[0]];
+            int[] b = CITY_CENTERS[link[1]];
+            if (distanceToSegment(x, z, a[0], a[1], b[0], b[1]) <= 2.2) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double distanceToSegment(int px, int pz, int ax, int az, int bx, int bz) {
+        double abx = bx - ax;
+        double abz = bz - az;
+        double apx = px - ax;
+        double apz = pz - az;
+        double ab2 = (abx * abx) + (abz * abz);
+        if (ab2 == 0) {
+            return Math.sqrt((px - ax) * (double) (px - ax) + (pz - az) * (double) (pz - az));
+        }
+        double t = Math.max(0.0, Math.min(1.0, (apx * abx + apz * abz) / ab2));
+        double cx = ax + (abx * t);
+        double cz = az + (abz * t);
+        double dx = px - cx;
+        double dz = pz - cz;
+        return Math.sqrt(dx * dx + dz * dz);
     }
 
     private record AxisSample(boolean road, int roadOffset) {
