@@ -59,12 +59,16 @@ public class HouseGenerator {
                     continue;
                 }
 
-                int houseW = 8 + random.nextInt(2);
-                int houseL = 8 + random.nextInt(2);
+                int houseW = 10 + random.nextInt(3);
+                int houseL = 10 + random.nextInt(3);
                 int houseX = centerX - (houseW / 2);
                 int houseZ = centerZ - (houseL / 2);
+                BlockFace entryFacing = nearestRoadDirection(centerX, centerZ);
+                if (entryFacing == null || houseTouchesRoad(houseX, houseZ, houseW, houseL)) {
+                    continue;
+                }
                 prepareLotSurface(region, minX, minZ, lotW, lotL, lotInfo.minY(), 20);
-                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette);
+                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette, entryFacing);
                 occupiedLots.add(new int[]{minX, minZ, minX + lotW - 1, minZ + lotL - 1});
             }
         }
@@ -152,7 +156,7 @@ public class HouseGenerator {
         }
     }
 
-    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette) {
+    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette, BlockFace entryFacing) {
         Material wall = palette.wall();
         Material roofStair = palette.roofStair();
         Material floor = palette.floor();
@@ -170,8 +174,8 @@ public class HouseGenerator {
         carveWindows(region, random, x, y, z, w, l, floorHeight, window);
 
         boolean doubleDoor = random.nextDouble() < 0.35;
-        placeDoor(region, x, y, z, w, doorMaterial, doubleDoor);
-        ensureFrontDoorStep(region, x, y, z, w, doubleDoor);
+        placeDoor(region, x, y, z, w, l, doorMaterial, doubleDoor, entryFacing);
+        ensureFrontDoorStep(region, x, y, z, w, l, doubleDoor, entryFacing);
         buildInteriorRooms(region, x, y, z, w, l, floorHeight, wall, doorMaterial, doubleDoor);
         decorateInterior(region, random, x, y, z, w, l);
         if (random.nextDouble() < 0.28) {
@@ -330,23 +334,51 @@ public class HouseGenerator {
         region.setType(x, y2, z, window);
     }
 
-    private void placeDoor(LimitedRegion region, int x, int y, int z, int w, Material doorMaterial, boolean doubleDoor) {
+    private void placeDoor(LimitedRegion region, int x, int y, int z, int w, int l, Material doorMaterial, boolean doubleDoor, BlockFace facing) {
         int doorX = x + (w / 2);
-        setDoor(region, doorX, y + 1, z, doorMaterial, BlockFace.SOUTH, false);
-        if (doubleDoor) {
-            setDoor(region, doorX - 1, y + 1, z, doorMaterial, BlockFace.SOUTH, true);
+        int doorZ = z + (l / 2);
+        if (facing == BlockFace.NORTH) {
+            setDoor(region, doorX, y + 1, z, doorMaterial, BlockFace.NORTH, false);
+            if (doubleDoor) setDoor(region, doorX - 1, y + 1, z, doorMaterial, BlockFace.NORTH, true);
+            return;
         }
+        if (facing == BlockFace.SOUTH) {
+            setDoor(region, doorX, y + 1, z + l - 1, doorMaterial, BlockFace.SOUTH, false);
+            if (doubleDoor) setDoor(region, doorX - 1, y + 1, z + l - 1, doorMaterial, BlockFace.SOUTH, true);
+            return;
+        }
+        if (facing == BlockFace.WEST) {
+            setDoor(region, x, y + 1, doorZ, doorMaterial, BlockFace.WEST, false);
+            if (doubleDoor) setDoor(region, x, y + 1, doorZ - 1, doorMaterial, BlockFace.WEST, true);
+            return;
+        }
+        setDoor(region, x + w - 1, y + 1, doorZ, doorMaterial, BlockFace.EAST, false);
+        if (doubleDoor) setDoor(region, x + w - 1, y + 1, doorZ - 1, doorMaterial, BlockFace.EAST, true);
     }
 
-    private void ensureFrontDoorStep(LimitedRegion region, int x, int y, int z, int w, boolean doubleDoor) {
+    private void ensureFrontDoorStep(LimitedRegion region, int x, int y, int z, int w, int l, boolean doubleDoor, BlockFace facing) {
         int doorX = x + (w / 2);
+        int doorZ = z + (l / 2);
         for (int i = 0; i < (doubleDoor ? 2 : 1); i++) {
-            int stepX = doorX - i;
+            int stepX = doorX;
             int stepY = y;
             int stepZ = z - 1;
+            if (facing == BlockFace.SOUTH) {
+                stepX = doorX - i;
+                stepZ = z + l;
+            } else if (facing == BlockFace.NORTH) {
+                stepX = doorX - i;
+                stepZ = z - 1;
+            } else if (facing == BlockFace.WEST) {
+                stepX = x - 1;
+                stepZ = doorZ - i;
+            } else if (facing == BlockFace.EAST) {
+                stepX = x + w;
+                stepZ = doorZ - i;
+            }
             if (region.getType(stepX, stepY, stepZ).isAir()) {
                 Stairs step = (Stairs) Bukkit.createBlockData(Material.STONE_BRICK_STAIRS);
-                step.setFacing(BlockFace.SOUTH);
+                step.setFacing(facing);
                 step.setHalf(Stairs.Half.BOTTOM);
                 region.setBlockData(stepX, stepY, stepZ, step);
             }
@@ -706,6 +738,32 @@ public class HouseGenerator {
     }
 
     private record WoodPalette(Material wall, Material floor, Material roofStair, Material door) {
+    }
+
+    private BlockFace nearestRoadDirection(int x, int z) {
+        int north = distanceToRoad(x, z, 0, -1, 24);
+        int south = distanceToRoad(x, z, 0, 1, 24);
+        int west = distanceToRoad(x, z, -1, 0, 24);
+        int east = distanceToRoad(x, z, 1, 0, 24);
+        int min = Math.min(Math.min(north, south), Math.min(west, east));
+        if (min > 24) {
+            return null;
+        }
+        if (min == north) return BlockFace.NORTH;
+        if (min == south) return BlockFace.SOUTH;
+        if (min == west) return BlockFace.WEST;
+        return BlockFace.EAST;
+    }
+
+    private boolean houseTouchesRoad(int x, int z, int w, int l) {
+        for (int xx = x; xx < x + w; xx++) {
+            for (int zz = z; zz < z + l; zz++) {
+                if (cityGenerator.getRoadType(xx, zz) != CityGenerator.RoadType.NONE) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean isMountainVillage(int x, int z) {

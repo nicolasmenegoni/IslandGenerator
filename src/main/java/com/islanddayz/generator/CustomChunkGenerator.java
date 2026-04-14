@@ -195,21 +195,20 @@ public class CustomChunkGenerator extends ChunkGenerator {
             if (dist2 > peak[2] * peak[2]) {
                 continue;
             }
-            int caveCenterY = SEA_LEVEL + 28;
-            for (int y = caveCenterY - 12; y <= caveCenterY + 8 && y < topY - 2; y++) {
-                double nx = dx / (double) peak[2];
-                double nz = dz / (double) peak[2];
-                double ny = (y - caveCenterY) / 12.0;
-                if ((nx * nx) + (nz * nz) + (ny * ny) < 0.9) {
-                    data.setBlock(localX, y, localZ, Material.AIR);
-                }
-            }
-
             int entryX = peak[0] + peak[2] - 6;
             int entryZ = peak[1];
             int tunnelY = SEA_LEVEL + 22;
-            if (Math.abs(worldZ - entryZ) <= 5 && worldX >= entryX - 36 && worldX <= entryX + 2) {
-                for (int y = tunnelY - 8; y <= tunnelY + 8 && y < topY; y++) {
+            for (int t = 0; t <= 46; t++) {
+                int cx = entryX - t;
+                int cz = entryZ + (int) Math.round(Math.sin(t * 0.22) * 4.0);
+                int cy = tunnelY + (int) Math.round(Math.sin(t * 0.17) * 3.0);
+                int radius = (t < 8) ? 5 : 3;
+                int ddx = worldX - cx;
+                int ddz = worldZ - cz;
+                if ((ddx * ddx) + (ddz * ddz) > radius * radius) {
+                    continue;
+                }
+                for (int y = cy - 3; y <= cy + 3 && y < topY; y++) {
                     data.setBlock(localX, y, localZ, Material.AIR);
                 }
             }
