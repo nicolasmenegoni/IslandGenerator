@@ -6,7 +6,6 @@ import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.LimitedRegion;
 import org.bukkit.generator.WorldInfo;
-import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 import java.util.List;
 import java.util.Random;
@@ -21,16 +20,13 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private final TerrainGenerator terrainGenerator;
     private final CityGenerator cityGenerator;
     private final TreeGenerator treeGenerator;
-    private final StreetLightGenerator streetLightGenerator;
     private final HouseGenerator houseGenerator;
-    private final SimplexNoiseGenerator roadPatchNoise = new SimplexNoiseGenerator(77123L);
 
     public CustomChunkGenerator(IslandGenerator islandGenerator, TerrainGenerator terrainGenerator, CityGenerator cityGenerator, TreeGenerator treeGenerator) {
         this.islandGenerator = islandGenerator;
         this.terrainGenerator = terrainGenerator;
         this.cityGenerator = cityGenerator;
         this.treeGenerator = treeGenerator;
-        this.streetLightGenerator = new StreetLightGenerator(cityGenerator);
         this.houseGenerator = new HouseGenerator(cityGenerator);
     }
 
@@ -134,15 +130,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
         if (insideCity) {
             CityGenerator.RoadType roadType = cityGenerator.getRoadType(x, z);
-            if (roadType == CityGenerator.RoadType.MAIN) {
-                if (cityGenerator.isRoadStripe(x, z)) {
-                    return Material.YELLOW_CONCRETE;
-                }
-                double noise = roadPatchNoise.noise(x * 0.18, z * 0.18);
-                double jitter = (Math.floorMod(x * 734287 + z * 912931, 1000) / 1000.0) * 0.35;
-                return (noise + jitter) > 0.97 ? Material.LIGHT_GRAY_CONCRETE_POWDER : Material.GRAY_CONCRETE;
-            }
-            if (roadType == CityGenerator.RoadType.DIRT) {
+            if (roadType == CityGenerator.RoadType.MAIN || roadType == CityGenerator.RoadType.DIRT) {
                 return Material.DIRT_PATH;
             }
             return Material.GRASS_BLOCK;
@@ -190,7 +178,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     @Override
     public List<BlockPopulator> getDefaultPopulators(World world) {
-        return List.of(new HousePopulator(houseGenerator), new TreePopulator(treeGenerator), new StreetLightPopulator(streetLightGenerator));
+        return List.of(new HousePopulator(houseGenerator), new TreePopulator(treeGenerator));
     }
 
     @Override
@@ -225,7 +213,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     @Override
     public boolean shouldGenerateStructures() {
-        return false;
+        return true;
     }
 
 
@@ -255,16 +243,4 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
     }
 
-    private static final class StreetLightPopulator extends BlockPopulator {
-        private final StreetLightGenerator streetLightGenerator;
-
-        private StreetLightPopulator(StreetLightGenerator streetLightGenerator) {
-            this.streetLightGenerator = streetLightGenerator;
-        }
-
-        @Override
-        public void populate(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, LimitedRegion region) {
-            streetLightGenerator.populateChunk(region, chunkX, chunkZ);
-        }
-    }
 }

@@ -15,12 +15,8 @@ public class CityGenerator {
             {220, 330},
             {-360, -280}
     };
-    private static final int[][] CITY_LINKS = {
-            {0, 1}, {0, 2}, {0, 3}, {0, 4}
-    };
-
-    private static final int[] LOT_PATTERN_X = {10, 14, 18, 22, 12, 24, 16, 20, 11, 26, 15, 13, 21};
-    private static final int[] LOT_PATTERN_Z = {11, 16, 14, 23, 12, 25, 10, 19, 17, 27, 13, 20, 15};
+    private static final int[] LOT_PATTERN_X = {8, 10, 12, 14, 9, 11, 13, 15};
+    private static final int[] LOT_PATTERN_Z = {8, 11, 9, 12, 10, 13, 9, 14};
 
     private final SimplexNoiseGenerator warpNoise = new SimplexNoiseGenerator(42888L);
     private final SimplexNoiseGenerator shapeNoise = new SimplexNoiseGenerator(90812L);
@@ -46,12 +42,8 @@ public class CityGenerator {
     }
 
     public RoadType getRoadType(int x, int z) {
-        if (isInterCityConnector(x, z)) {
-            return RoadType.MAIN;
-        }
-
         double influence = cityInfluence(x, z);
-        if (influence <= 0.45) {
+        if (influence <= 0.52) {
             return RoadType.NONE;
         }
 
@@ -59,42 +51,28 @@ public class CityGenerator {
         int localX = x - CITY_CENTERS[cityIndex][0];
         int localZ = z - CITY_CENTERS[cityIndex][1];
 
-        if (cityEdgeDistance(x, z, cityIndex) < 16.0) {
+        if (cityEdgeDistance(x, z, cityIndex) < 8.0) {
             return RoadType.NONE;
         }
+        double wx = localX + warpX(localX, localZ);
+        double wz = localZ + warpZ(localX, localZ);
 
-        AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
-        AxisSample sampleZ = sampleAxis(localZ + warpZ(localX, localZ), LOT_PATTERN_Z);
-
-        boolean cutAtEdge = shouldTerminateNearEdge(localX, localZ, influence, cityIndex);
-
-        if (sampleX.road && !cutAtEdge) {
-            return RoadType.MAIN;
+        if ((cityIndex & 1) == 0) {
+            boolean primary = Math.abs(wx) <= 1.3;
+            boolean parallels = Math.abs(wx - 6) <= 1.3 || Math.abs(wx + 6) <= 1.3
+                    || Math.abs(wx - 12) <= 1.3 || Math.abs(wx + 12) <= 1.3;
+            boolean withinVillage = Math.abs(wz) <= 34;
+            return (withinVillage && (primary || parallels)) ? RoadType.DIRT : RoadType.NONE;
         }
-        if ((sampleZ.road && !cutAtEdge) || isRareCurvedRoad(localX, localZ, influence, cityIndex)) {
-            return RoadType.DIRT;
-        }
-        return RoadType.NONE;
+
+        boolean vertical = Math.abs(wx) <= 1.3 && wz >= -34 && wz <= 34;
+        boolean horizontal = Math.abs(wz) <= 1.3 && wx >= -34 && wx <= 34;
+        boolean extraLeg = Math.abs(wz - 8) <= 1.3 && wx >= -22 && wx <= 18;
+        return (vertical || horizontal || extraLeg) ? RoadType.DIRT : RoadType.NONE;
     }
 
     public boolean isRoadStripe(int x, int z) {
-        if (isInterCityConnector(x, z)) {
-            return Math.floorMod(x + z, 6) < 2;
-        }
-        if (getRoadType(x, z) != RoadType.MAIN) {
-            return false;
-        }
-
-        int cityIndex = nearestCityIndex(x, z);
-        int localX = x - CITY_CENTERS[cityIndex][0];
-        int localZ = z - CITY_CENTERS[cityIndex][1];
-
-        if (cityEdgeDistance(x, z, cityIndex) < 16.0) {
-            return false;
-        }
-
-        AxisSample sampleX = sampleAxis(localX + warpX(localX, localZ), LOT_PATTERN_X);
-        return sampleX.road && sampleX.roadOffset == 2 && stripePattern(localZ);
+        return false;
     }
 
 
@@ -109,10 +87,10 @@ public class CityGenerator {
     }
 
     private double irregularRadiusForCity(int x, int z, double angle, int cityIndex) {
-        return 102
-                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 8
-                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 5
-                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 9;
+        return 64
+                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 5
+                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 3
+                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 6;
     }
 
     private int nearestCityIndex(int x, int z) {
@@ -195,40 +173,6 @@ public class CityGenerator {
     private double smooth(double value) {
         double v = Math.max(0, Math.min(1, value));
         return v * v * (3 - 2 * v);
-    }
-
-    private boolean isInterCityConnector(int x, int z) {
-        for (int[] link : CITY_LINKS) {
-            int[] a = CITY_CENTERS[link[0]];
-            int[] b = CITY_CENTERS[link[1]];
-            int sx = a[0] + (int) Math.signum(b[0] - a[0]) * 88;
-            int sz = a[1] + (int) Math.signum(b[1] - a[1]) * 88;
-            int ex = b[0] + (int) Math.signum(a[0] - b[0]) * 88;
-            int ez = b[1] + (int) Math.signum(a[1] - b[1]) * 88;
-            if (distanceToAxisAlignedPath(x, z, sx, sz, ex, ez) <= 2.2) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private double distanceToAxisAlignedPath(int px, int pz, int sx, int sz, int ex, int ez) {
-        double firstLeg = distanceToSegment(px, pz, sx, sz, ex, sz);
-        double secondLeg = distanceToSegment(px, pz, ex, sz, ex, ez);
-        return Math.min(firstLeg, secondLeg);
-    }
-
-    private double distanceToSegment(int px, int pz, int ax, int az, int bx, int bz) {
-        if (ax == bx) {
-            int minZ = Math.min(az, bz);
-            int maxZ = Math.max(az, bz);
-            int clampedZ = Math.max(minZ, Math.min(maxZ, pz));
-            return Math.sqrt((px - ax) * (double) (px - ax) + (pz - clampedZ) * (double) (pz - clampedZ));
-        }
-        int minX = Math.min(ax, bx);
-        int maxX = Math.max(ax, bx);
-        int clampedX = Math.max(minX, Math.min(maxX, px));
-        return Math.sqrt((px - clampedX) * (double) (px - clampedX) + (pz - az) * (double) (pz - az));
     }
 
     private record AxisSample(boolean road, int roadOffset) {
