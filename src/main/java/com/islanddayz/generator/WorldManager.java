@@ -8,6 +8,7 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.WorldCreator;
 import org.bukkit.WorldType;
+import org.bukkit.GameRule;
 
 import java.util.Random;
 
@@ -39,6 +40,11 @@ public class WorldManager {
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0, 0);
         border.setSize(1536);
+
+        world.setStorm(false);
+        world.setThundering(false);
+        world.setClearWeatherDuration(Integer.MAX_VALUE);
+        world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
 
         Location spawn = findBeachSpawn();
         world.setSpawnLocation(spawn);

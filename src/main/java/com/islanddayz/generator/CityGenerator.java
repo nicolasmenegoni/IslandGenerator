@@ -61,6 +61,9 @@ public class CityGenerator {
         if ((x * x) + (z * z) < (170 * 170)) {
             return RoadType.NONE;
         }
+        if (isMountainRegion(x, z)) {
+            return RoadType.NONE;
+        }
         double influence = cityInfluence(x, z);
         if (influence <= 0.52) {
             return RoadType.NONE;
@@ -207,5 +210,21 @@ public class CityGenerator {
     }
 
     private record AxisSample(boolean road, int roadOffset) {
+    }
+
+    private boolean isMountainRegion(int x, int z) {
+        int[][] peaks = {
+                {280, 260, 190},
+                {-320, 180, 185},
+                {250, -300, 195}
+        };
+        for (int[] peak : peaks) {
+            int dx = x - peak[0];
+            int dz = z - peak[1];
+            if ((dx * dx) + (dz * dz) <= peak[2] * peak[2]) {
+                return true;
+            }
+        }
+        return false;
     }
 }

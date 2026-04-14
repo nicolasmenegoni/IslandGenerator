@@ -205,11 +205,11 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 }
             }
 
-            int entryX = peak[0] + peak[2] - 8;
+            int entryX = peak[0] + peak[2] - 6;
             int entryZ = peak[1];
-            int tunnelY = SEA_LEVEL + 24;
-            if (Math.abs(worldZ - entryZ) <= 2 && worldX >= entryX - 24 && worldX <= entryX) {
-                for (int y = tunnelY - 3; y <= tunnelY + 3 && y < topY; y++) {
+            int tunnelY = SEA_LEVEL + 22;
+            if (Math.abs(worldZ - entryZ) <= 5 && worldX >= entryX - 36 && worldX <= entryX + 2) {
+                for (int y = tunnelY - 8; y <= tunnelY + 8 && y < topY; y++) {
                     data.setBlock(localX, y, localZ, Material.AIR);
                 }
             }

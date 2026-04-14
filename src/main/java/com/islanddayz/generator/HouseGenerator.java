@@ -35,6 +35,9 @@ public class HouseGenerator {
             if ((cx * cx) + (cz * cz) < (170 * 170)) {
                 continue;
             }
+            if (isMountainVillage(cx, cz)) {
+                continue;
+            }
             int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
             WoodPalette palette = woodPalette(villageIndex);
             for (int[] plot : plots) {
@@ -43,26 +46,23 @@ public class HouseGenerator {
                 if (centerX < startX || centerX > endX || centerZ < startZ || centerZ > endZ) {
                     continue;
                 }
-                if (!isCenteredLotCandidate(centerX, centerZ)) {
+                if (!isCenteredLotCandidate(centerX, centerZ) || isMountainVillage(centerX, centerZ)) {
                     continue;
                 }
 
-                int lotW = 11 + random.nextInt(3);
-                int lotL = 11 + random.nextInt(3);
+                int lotW = 12;
+                int lotL = 12;
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
                 LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
-                if (!lotInfo.buildable()) {
-                    continue;
-                }
                 if (intersectsOccupiedLot(occupiedLots, minX, minZ, lotW, lotL)) {
                     continue;
                 }
 
-                int houseW = lotW - (4 + random.nextInt(4));
-                int houseL = lotL - (4 + random.nextInt(4));
-                int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
-                int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
+                int houseW = 8 + random.nextInt(2);
+                int houseL = 8 + random.nextInt(2);
+                int houseX = centerX - (houseW / 2);
+                int houseZ = centerZ - (houseL / 2);
                 prepareLotSurface(region, minX, minZ, lotW, lotL, lotInfo.minY(), 20);
                 buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette);
                 occupiedLots.add(new int[]{minX, minZ, minX + lotW - 1, minZ + lotL - 1});
@@ -100,7 +100,7 @@ public class HouseGenerator {
         if ((x * x) + (z * z) < (170 * 170)) {
             return false;
         }
-        if (cityGenerator.cityInfluence(x, z) < 0.3 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
+        if (cityGenerator.cityInfluence(x, z) < 0.28 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
             return false;
         }
 
@@ -125,16 +125,13 @@ public class HouseGenerator {
         int maxY = Integer.MIN_VALUE;
         for (int x = minX; x < minX + w; x++) {
             for (int z = minZ; z < minZ + l; z++) {
-                if (cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
-                    return new LotInfo(false, 0, 0);
-                }
                 int y = region.getHighestBlockYAt(x, z);
                 minY = Math.min(minY, y);
                 maxY = Math.max(maxY, y);
             }
         }
-        boolean nearCityEdge = cityGenerator.cityInfluence(centerX, centerZ) < 0.56;
-        boolean tooSteep = (maxY - minY) > 6;
+        boolean nearCityEdge = cityGenerator.cityInfluence(centerX, centerZ) < 0.25;
+        boolean tooSteep = (maxY - minY) > 9;
         return new LotInfo(!nearCityEdge && !tooSteep, minY, maxY);
     }
 
@@ -709,5 +706,21 @@ public class HouseGenerator {
     }
 
     private record WoodPalette(Material wall, Material floor, Material roofStair, Material door) {
+    }
+
+    private boolean isMountainVillage(int x, int z) {
+        int[][] peaks = {
+                {280, 260, 190},
+                {-320, 180, 185},
+                {250, -300, 195}
+        };
+        for (int[] peak : peaks) {
+            int dx = x - peak[0];
+            int dz = z - peak[1];
+            if ((dx * dx) + (dz * dz) <= peak[2] * peak[2]) {
+                return true;
+            }
+        }
+        return false;
     }
 }
