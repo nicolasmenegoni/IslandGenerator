@@ -27,19 +27,10 @@ public class HouseGenerator {
                 int centerX = startX + localX;
                 int centerZ = startZ + localZ;
 
-                if (cityGenerator.getRoadType(centerX, centerZ) != CityGenerator.RoadType.NONE
-                        || cityGenerator.cityInfluence(centerX, centerZ) < 0.25
-                        || Math.floorMod(centerX * 31 + centerZ * 17, 9) != 0) {
-                    continue;
-                }
-
                 int lotW = 18 + random.nextInt(8);
                 int lotL = 18 + random.nextInt(8);
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
-                if (!isLotValid(region, minX, minZ, lotW, lotL)) {
-                    continue;
-                }
 
                 int houseW = lotW - (4 + random.nextInt(4));
                 int houseL = lotL - (4 + random.nextInt(4));
@@ -49,25 +40,6 @@ public class HouseGenerator {
                 buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
             }
         }
-    }
-
-    private boolean isLotValid(LimitedRegion region, int minX, int minZ, int w, int l) {
-        int minY = Integer.MAX_VALUE;
-        int maxY = Integer.MIN_VALUE;
-        for (int x = minX; x < minX + w; x++) {
-            for (int z = minZ; z < minZ + l; z++) {
-                int y = region.getHighestBlockYAt(x, z);
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y);
-                Material ground = region.getType(x, y - 1, z);
-                if (cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE
-                        || cityGenerator.cityInfluence(x, z) < 0.22
-                        || (ground != Material.GRASS_BLOCK && ground != Material.DIRT && ground != Material.COARSE_DIRT)) {
-                    return false;
-                }
-            }
-        }
-        return (maxY - minY) <= 3;
     }
 
     private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
@@ -86,6 +58,7 @@ public class HouseGenerator {
         int floorHeight = 5 + random.nextInt(2);
         boolean secondFloor = random.nextDouble() < 0.35;
 
+        clearConstructionVolume(region, x, y, z, w, l, secondFloor ? (floorHeight * 2) + 8 : floorHeight + 8);
         buildAdaptiveFloor(region, x, y, z, w, l, floor);
         buildOuterWalls(region, x, y, z, w, l, floorHeight, wall);
         carveWindows(region, random, x, y, z, w, l, floorHeight, window);
@@ -106,6 +79,27 @@ public class HouseGenerator {
             buildTriangularRoof(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, roofStair, wall);
         } else {
             buildTriangularRoof(region, x, y + floorHeight, z, w, l, roofStair, wall);
+        }
+    }
+
+    private void clearConstructionVolume(LimitedRegion region, int x, int y, int z, int w, int l, int minClearance) {
+        int topY = y + minClearance;
+        for (int dx = 0; dx < w; dx++) {
+            for (int dz = 0; dz < l; dz++) {
+                int wx = x + dx;
+                int wz = z + dz;
+                topY = Math.max(topY, region.getHighestBlockYAt(wx, wz) + 2);
+            }
+        }
+
+        for (int dx = 0; dx < w; dx++) {
+            for (int dz = 0; dz < l; dz++) {
+                int wx = x + dx;
+                int wz = z + dz;
+                for (int yy = y; yy <= topY; yy++) {
+                    region.setType(wx, yy, wz, Material.AIR);
+                }
+            }
         }
     }
 
@@ -139,22 +133,14 @@ public class HouseGenerator {
     private void carveWindows(LimitedRegion region, Random random, int x, int y, int z, int w, int l, int h, Material window) {
         int y1 = y + 2;
         int y2 = Math.min(y + h - 1, y + 3);
-        for (int dx = 2; dx < w - 2; dx += 3) {
-            if (random.nextBoolean()) {
-                region.setType(x + dx, y1, z, window);
-                region.setType(x + dx, y2, z, window);
-                region.setType(x + dx, y1, z + l - 1, window);
-                region.setType(x + dx, y2, z + l - 1, window);
-            }
-        }
-        for (int dz = 2; dz < l - 2; dz += 3) {
-            if (random.nextBoolean()) {
-                region.setType(x, y1, z + dz, window);
-                region.setType(x, y2, z + dz, window);
-                region.setType(x + w - 1, y1, z + dz, window);
-                region.setType(x + w - 1, y2, z + dz, window);
-            }
-        }
+        region.setType(x, y1, z, window);
+        region.setType(x, y2, z, window);
+        region.setType(x + w - 1, y1, z, window);
+        region.setType(x + w - 1, y2, z, window);
+        region.setType(x, y1, z + l - 1, window);
+        region.setType(x, y2, z + l - 1, window);
+        region.setType(x + w - 1, y1, z + l - 1, window);
+        region.setType(x + w - 1, y2, z + l - 1, window);
     }
 
     private void placeDoor(LimitedRegion region, int x, int y, int z, int w, Material doorMaterial, boolean doubleDoor) {
@@ -179,15 +165,9 @@ public class HouseGenerator {
     }
 
     private void buildInteriorRooms(LimitedRegion region, int x, int y, int z, int w, int l, int h, Material wall, Material doorMaterial, boolean hasDoubleDoor) {
-        int doorZoneStart = x + w / 2 - (hasDoubleDoor ? 1 : 0);
-        int doorZoneEnd = x + w / 2;
-
         int wallX = x + (w / 3);
         int doorZ = z + l / 2;
         for (int zz = z + 1; zz <= z + l - 2; zz++) {
-            if (zz == doorZ) {
-                continue;
-            }
             for (int yy = y + 1; yy <= y + h; yy++) {
                 region.setType(wallX, yy, zz, wall);
             }
@@ -197,9 +177,6 @@ public class HouseGenerator {
         int wallZ = z + (l * 2 / 3);
         int doorX = x + w / 2;
         for (int xx = x + 1; xx <= x + w - 2; xx++) {
-            if ((xx >= doorZoneStart && xx <= doorZoneEnd) || xx == doorX) {
-                continue;
-            }
             for (int yy = y + 1; yy <= y + h; yy++) {
                 region.setType(xx, yy, wallZ, wall);
             }
@@ -268,9 +245,9 @@ public class HouseGenerator {
                     random.nextBoolean() ? Material.WAXED_OXIDIZED_COPPER : Material.WAXED_EXPOSED_COPPER);
         }
 
-        for (int dx = 3; dx < w - 3; dx += 3) {
-            for (int dz = 3; dz < l - 3; dz += 3) {
-                if (random.nextDouble() < 0.35) {
+        for (int dx = 2; dx < w - 2; dx++) {
+            for (int dz = 2; dz < l - 2; dz++) {
+                if (random.nextDouble() < 0.65) {
                     region.setType(x + dx, y + 1, z + dz, carpets[random.nextInt(carpets.length)]);
                 }
             }
