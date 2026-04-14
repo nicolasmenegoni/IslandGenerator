@@ -16,7 +16,7 @@ public class CityGenerator {
             {-360, -280}
     };
     private static final int[][] CITY_LINKS = {
-            {0, 1}, {0, 2}, {0, 3}, {0, 4}
+            {0, 1}, {1, 4}, {0, 2}, {0, 3}
     };
 
     private static final int[] LOT_PATTERN_X = {12, 18, 24, 30, 16, 35, 22, 28, 14, 40, 26, 19, 33};
@@ -78,6 +78,9 @@ public class CityGenerator {
     }
 
     public boolean isRoadStripe(int x, int z) {
+        if (isInterCityConnector(x, z)) {
+            return Math.floorMod(x + z, 6) < 2;
+        }
         if (getRoadType(x, z) != RoadType.MAIN) {
             return false;
         }
@@ -198,28 +201,34 @@ public class CityGenerator {
         for (int[] link : CITY_LINKS) {
             int[] a = CITY_CENTERS[link[0]];
             int[] b = CITY_CENTERS[link[1]];
-            if (distanceToSegment(x, z, a[0], a[1], b[0], b[1]) <= 2.2) {
+            int sx = a[0] + (int) Math.signum(b[0] - a[0]) * 96;
+            int sz = a[1] + (int) Math.signum(b[1] - a[1]) * 96;
+            int ex = b[0] + (int) Math.signum(a[0] - b[0]) * 96;
+            int ez = b[1] + (int) Math.signum(a[1] - b[1]) * 96;
+            if (distanceToAxisAlignedPath(x, z, sx, sz, ex, ez) <= 2.2) {
                 return true;
             }
         }
         return false;
     }
 
+    private double distanceToAxisAlignedPath(int px, int pz, int sx, int sz, int ex, int ez) {
+        double firstLeg = distanceToSegment(px, pz, sx, sz, ex, sz);
+        double secondLeg = distanceToSegment(px, pz, ex, sz, ex, ez);
+        return Math.min(firstLeg, secondLeg);
+    }
+
     private double distanceToSegment(int px, int pz, int ax, int az, int bx, int bz) {
-        double abx = bx - ax;
-        double abz = bz - az;
-        double apx = px - ax;
-        double apz = pz - az;
-        double ab2 = (abx * abx) + (abz * abz);
-        if (ab2 == 0) {
-            return Math.sqrt((px - ax) * (double) (px - ax) + (pz - az) * (double) (pz - az));
+        if (ax == bx) {
+            int minZ = Math.min(az, bz);
+            int maxZ = Math.max(az, bz);
+            int clampedZ = Math.max(minZ, Math.min(maxZ, pz));
+            return Math.sqrt((px - ax) * (double) (px - ax) + (pz - clampedZ) * (double) (pz - clampedZ));
         }
-        double t = Math.max(0.0, Math.min(1.0, (apx * abx + apz * abz) / ab2));
-        double cx = ax + (abx * t);
-        double cz = az + (abz * t);
-        double dx = px - cx;
-        double dz = pz - cz;
-        return Math.sqrt(dx * dx + dz * dz);
+        int minX = Math.min(ax, bx);
+        int maxX = Math.max(ax, bx);
+        int clampedX = Math.max(minX, Math.min(maxX, px));
+        return Math.sqrt((px - clampedX) * (double) (px - clampedX) + (pz - az) * (double) (pz - az));
     }
 
     private record AxisSample(boolean road, int roadOffset) {
