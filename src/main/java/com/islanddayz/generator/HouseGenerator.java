@@ -21,26 +21,32 @@ public class HouseGenerator {
     public void populateChunk(LimitedRegion region, int chunkX, int chunkZ, Random random) {
         int startX = chunkX << 4;
         int startZ = chunkZ << 4;
-        int centerX = startX + 8;
-        int centerZ = startZ + 8;
-        if (!isCenteredLotCandidate(centerX, centerZ)) {
-            return;
-        }
+        int[] slots = {4, 12};
+        for (int localX : slots) {
+            for (int localZ : slots) {
+                int centerX = startX + localX;
+                int centerZ = startZ + localZ;
+                if (!isCenteredLotCandidate(centerX, centerZ)) {
+                    continue;
+                }
 
-        int lotW = 18 + random.nextInt(8);
-        int lotL = 18 + random.nextInt(8);
-        int minX = centerX - lotW / 2;
-        int minZ = centerZ - lotL / 2;
-        if (!isLotBuildable(region, minX, minZ, lotW, lotL)) {
-            return;
-        }
+                int lotW = 18 + random.nextInt(6);
+                int lotL = 18 + random.nextInt(6);
+                int minX = centerX - lotW / 2;
+                int minZ = centerZ - lotL / 2;
+                LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
+                if (!lotInfo.buildable()) {
+                    continue;
+                }
 
-        int houseW = lotW - (4 + random.nextInt(4));
-        int houseL = lotL - (4 + random.nextInt(4));
-        int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
-        int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
-        int y = region.getHighestBlockYAt(centerX, centerZ) - 1;
-        buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
+                int houseW = lotW - (4 + random.nextInt(4));
+                int houseL = lotL - (4 + random.nextInt(4));
+                int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
+                int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
+                prepareLotSurface(region, minX, minZ, lotW, lotL, lotInfo.minY(), 20);
+                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL);
+            }
+        }
     }
 
     private boolean isCenteredLotCandidate(int x, int z) {
@@ -67,20 +73,40 @@ public class HouseGenerator {
         return maxDist + 1;
     }
 
-    private boolean isLotBuildable(LimitedRegion region, int minX, int minZ, int w, int l) {
+    private LotInfo analyzeLot(LimitedRegion region, int minX, int minZ, int w, int l, int centerX, int centerZ) {
         int minY = Integer.MAX_VALUE;
         int maxY = Integer.MIN_VALUE;
         for (int x = minX; x < minX + w; x++) {
             for (int z = minZ; z < minZ + l; z++) {
                 if (cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
-                    return false;
+                    return new LotInfo(false, 0, 0);
                 }
                 int y = region.getHighestBlockYAt(x, z);
                 minY = Math.min(minY, y);
                 maxY = Math.max(maxY, y);
             }
         }
-        return (maxY - minY) <= 5;
+        boolean nearCityEdge = cityGenerator.cityInfluence(centerX, centerZ) < 0.62;
+        boolean tooSteep = (maxY - minY) > 4;
+        return new LotInfo(!nearCityEdge && !tooSteep, minY, maxY);
+    }
+
+    private void prepareLotSurface(LimitedRegion region, int minX, int minZ, int w, int l, int baseY, int extraHeight) {
+        int topY = baseY + extraHeight;
+        for (int x = minX; x < minX + w; x++) {
+            for (int z = minZ; z < minZ + l; z++) {
+                topY = Math.max(topY, region.getHighestBlockYAt(x, z) + 2);
+            }
+        }
+
+        for (int x = minX; x < minX + w; x++) {
+            for (int z = minZ; z < minZ + l; z++) {
+                region.setType(x, baseY, z, Material.DIRT);
+                for (int yy = baseY + 1; yy <= topY; yy++) {
+                    region.setType(x, yy, z, Material.AIR);
+                }
+            }
+        }
     }
 
     private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
@@ -138,7 +164,7 @@ public class HouseGenerator {
             for (int dz = 0; dz < l; dz++) {
                 int wx = x + dx;
                 int wz = z + dz;
-                for (int yy = y; yy <= topY; yy++) {
+                for (int yy = y + 1; yy <= topY; yy++) {
                     region.setType(wx, yy, wz, Material.AIR);
                 }
             }
@@ -304,10 +330,10 @@ public class HouseGenerator {
 
         for (int layer = 0; layer < layers; layer++) {
             int y = roofBaseY + layer;
-            int minX = x - 1 + (alongX ? 0 : layer);
-            int maxX = x + w + (alongX ? 0 : -1 - layer);
-            int minZ = z - 1 + (alongX ? layer : 0);
-            int maxZ = z + l + (alongX ? -1 - layer : 0);
+            int minX = alongX ? x - 1 : x - 1 + layer;
+            int maxX = alongX ? x + w : x + w - 1 - layer;
+            int minZ = alongX ? z - 1 + layer : z - 1;
+            int maxZ = alongX ? z + l - 1 - layer : z + l;
 
             if (minX > maxX || minZ > maxZ) {
                 break;
@@ -420,5 +446,8 @@ public class HouseGenerator {
 
         region.setBlockData(x, y, z, foot);
         region.setBlockData(hx, y, hz, head);
+    }
+
+    private record LotInfo(boolean buildable, int minY, int maxY) {
     }
 }
