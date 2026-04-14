@@ -28,6 +28,9 @@ public class HouseGenerator {
         int lotL = 18 + random.nextInt(8);
         int minX = centerX - lotW / 2;
         int minZ = centerZ - lotL / 2;
+        if (hasRoadInLot(minX, minZ, lotW, lotL)) {
+            return;
+        }
 
         int houseW = lotW - (4 + random.nextInt(4));
         int houseL = lotL - (4 + random.nextInt(4));
@@ -35,6 +38,17 @@ public class HouseGenerator {
         int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
         int y = region.getHighestBlockYAt(centerX, centerZ) - 1;
         buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
+    }
+
+    private boolean hasRoadInLot(int minX, int minZ, int w, int l) {
+        for (int x = minX; x < minX + w; x++) {
+            for (int z = minZ; z < minZ + l; z++) {
+                if (cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
@@ -227,6 +241,7 @@ public class HouseGenerator {
 
     private void decorateInterior(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
         Material[] carpets = {Material.RED_CARPET, Material.GREEN_CARPET, Material.CYAN_CARPET, Material.GRAY_CARPET};
+        Material carpetColor = carpets[random.nextInt(carpets.length)];
 
         region.setType(x + 2, y + 1, z + 2, Material.CRAFTING_TABLE);
         region.setType(x + w - 3, y + 1, z + 2, Material.FURNACE);
@@ -242,8 +257,8 @@ public class HouseGenerator {
 
         for (int dx = 2; dx < w - 2; dx++) {
             for (int dz = 2; dz < l - 2; dz++) {
-                if (random.nextDouble() < 0.65) {
-                    region.setType(x + dx, y + 1, z + dz, carpets[random.nextInt(carpets.length)]);
+                if (random.nextDouble() < 0.65 && region.getType(x + dx, y + 1, z + dz).isAir()) {
+                    region.setType(x + dx, y + 1, z + dz, carpetColor);
                 }
             }
         }
