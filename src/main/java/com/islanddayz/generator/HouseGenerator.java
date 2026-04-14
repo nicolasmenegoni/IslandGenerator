@@ -45,7 +45,7 @@ public class HouseGenerator {
                 int houseL = lotL - (4 + random.nextInt(4));
                 int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
                 int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
-                int y = region.getHighestBlockYAt(centerX, centerZ);
+                int y = region.getHighestBlockYAt(centerX, centerZ) - 1;
                 buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
             }
         }
@@ -92,7 +92,7 @@ public class HouseGenerator {
 
         boolean doubleDoor = random.nextDouble() < 0.35;
         placeDoor(region, x, y, z, w, doorMaterial, doubleDoor);
-        buildInteriorRooms(region, x, y, z, w, l, floorHeight, wall, doubleDoor);
+        buildInteriorRooms(region, x, y, z, w, l, floorHeight, wall, doorMaterial, doubleDoor);
         decorateInterior(region, random, x, y, z, w, l);
 
         if (secondFloor) {
@@ -100,7 +100,7 @@ public class HouseGenerator {
             buildAdaptiveFloor(region, x + 1, secondY, z + 1, w - 2, l - 2, floorChoices[random.nextInt(floorChoices.length)]);
             buildOuterWalls(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall);
             carveWindows(region, random, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, window);
-            buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, false);
+            buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, doorMaterial, false);
             decorateInterior(region, random, x + 1, secondY, z + 1, w - 2, l - 2);
             buildStairsBetweenFloors(region, x + 2, y + 1, z + 2, floorHeight - 1);
             buildTriangularRoof(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, roofStair, wall);
@@ -178,26 +178,33 @@ public class HouseGenerator {
         region.setBlockData(x, y + 1, z, upper);
     }
 
-    private void buildInteriorRooms(LimitedRegion region, int x, int y, int z, int w, int l, int h, Material wall, boolean hasDoubleDoor) {
+    private void buildInteriorRooms(LimitedRegion region, int x, int y, int z, int w, int l, int h, Material wall, Material doorMaterial, boolean hasDoubleDoor) {
         int doorZoneStart = x + w / 2 - (hasDoubleDoor ? 1 : 0);
         int doorZoneEnd = x + w / 2;
 
         int wallX = x + (w / 3);
-        for (int zz = z + 2; zz < z + l - 2; zz++) {
-            if (zz == z + l / 2) continue;
+        int doorZ = z + l / 2;
+        for (int zz = z + 1; zz <= z + l - 2; zz++) {
+            if (zz == doorZ) {
+                continue;
+            }
             for (int yy = y + 1; yy <= y + h; yy++) {
                 region.setType(wallX, yy, zz, wall);
             }
         }
+        setDoor(region, wallX, y + 1, doorZ, doorMaterial, BlockFace.EAST, false);
 
         int wallZ = z + (l * 2 / 3);
-        for (int xx = x + 2; xx < x + w - 2; xx++) {
-            if (xx >= doorZoneStart && xx <= doorZoneEnd) continue;
-            if (xx == wallX) continue;
+        int doorX = x + w / 2;
+        for (int xx = x + 1; xx <= x + w - 2; xx++) {
+            if ((xx >= doorZoneStart && xx <= doorZoneEnd) || xx == doorX) {
+                continue;
+            }
             for (int yy = y + 1; yy <= y + h; yy++) {
                 region.setType(xx, yy, wallZ, wall);
             }
         }
+        setDoor(region, doorX, y + 1, wallZ, doorMaterial, BlockFace.SOUTH, false);
     }
 
     private void buildStairsBetweenFloors(LimitedRegion region, int x, int y, int z, int height) {
@@ -230,9 +237,9 @@ public class HouseGenerator {
                     if (edge) {
                         BlockFace facing;
                         if (alongX) {
-                            facing = (zz == minZ) ? BlockFace.NORTH : BlockFace.SOUTH;
+                            facing = (zz == minZ) ? BlockFace.SOUTH : BlockFace.NORTH;
                         } else {
-                            facing = (xx == minX) ? BlockFace.WEST : BlockFace.EAST;
+                            facing = (xx == minX) ? BlockFace.EAST : BlockFace.WEST;
                         }
                         Stairs stair = (Stairs) Bukkit.createBlockData(roofStair);
                         stair.setFacing(facing);
