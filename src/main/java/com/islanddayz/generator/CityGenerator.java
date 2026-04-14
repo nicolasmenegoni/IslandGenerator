@@ -16,11 +16,11 @@ public class CityGenerator {
             {-360, -280}
     };
     private static final int[][] CITY_LINKS = {
-            {0, 1}, {1, 4}, {0, 2}, {0, 3}
+            {0, 1}, {0, 2}, {0, 3}, {0, 4}
     };
 
-    private static final int[] LOT_PATTERN_X = {12, 18, 24, 30, 16, 35, 22, 28, 14, 40, 26, 19, 33};
-    private static final int[] LOT_PATTERN_Z = {15, 27, 20, 34, 18, 38, 12, 29, 25, 41, 17, 31, 22};
+    private static final int[] LOT_PATTERN_X = {10, 14, 18, 22, 12, 24, 16, 20, 11, 26, 15, 13, 21};
+    private static final int[] LOT_PATTERN_Z = {11, 16, 14, 23, 12, 25, 10, 19, 17, 27, 13, 20, 15};
 
     private final SimplexNoiseGenerator warpNoise = new SimplexNoiseGenerator(42888L);
     private final SimplexNoiseGenerator shapeNoise = new SimplexNoiseGenerator(90812L);
@@ -109,10 +109,10 @@ public class CityGenerator {
     }
 
     private double irregularRadiusForCity(int x, int z, double angle, int cityIndex) {
-        return 118
-                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 10
-                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 6
-                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 12;
+        return 102
+                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 8
+                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 5
+                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 9;
     }
 
     private int nearestCityIndex(int x, int z) {
@@ -201,10 +201,10 @@ public class CityGenerator {
         for (int[] link : CITY_LINKS) {
             int[] a = CITY_CENTERS[link[0]];
             int[] b = CITY_CENTERS[link[1]];
-            int sx = a[0] + (int) Math.signum(b[0] - a[0]) * 96;
-            int sz = a[1] + (int) Math.signum(b[1] - a[1]) * 96;
-            int ex = b[0] + (int) Math.signum(a[0] - b[0]) * 96;
-            int ez = b[1] + (int) Math.signum(a[1] - b[1]) * 96;
+            int sx = a[0] + (int) Math.signum(b[0] - a[0]) * 88;
+            int sz = a[1] + (int) Math.signum(b[1] - a[1]) * 88;
+            int ex = b[0] + (int) Math.signum(a[0] - b[0]) * 88;
+            int ez = b[1] + (int) Math.signum(a[1] - b[1]) * 88;
             if (distanceToAxisAlignedPath(x, z, sx, sz, ex, ez) <= 2.2) {
                 return true;
             }

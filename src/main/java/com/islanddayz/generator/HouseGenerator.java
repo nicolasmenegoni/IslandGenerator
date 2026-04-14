@@ -11,6 +11,8 @@ import org.bukkit.block.data.type.Ladder;
 import org.bukkit.block.data.type.Stairs;
 import org.bukkit.generator.LimitedRegion;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class HouseGenerator {
@@ -24,6 +26,7 @@ public class HouseGenerator {
         int startX = chunkX << 4;
         int startZ = chunkZ << 4;
         int[] slots = {2, 4, 6, 8, 10, 12, 14};
+        List<int[]> occupiedLots = new ArrayList<>();
         for (int localX : slots) {
             for (int localZ : slots) {
                 int centerX = startX + localX;
@@ -32,12 +35,15 @@ public class HouseGenerator {
                     continue;
                 }
 
-                int lotW = 14 + random.nextInt(5);
-                int lotL = 14 + random.nextInt(5);
+                int lotW = 18 + random.nextInt(7);
+                int lotL = 18 + random.nextInt(7);
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
                 LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
                 if (!lotInfo.buildable()) {
+                    continue;
+                }
+                if (intersectsOccupiedLot(occupiedLots, minX, minZ, lotW, lotL)) {
                     continue;
                 }
 
@@ -47,8 +53,21 @@ public class HouseGenerator {
                 int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
                 prepareLotSurface(region, minX, minZ, lotW, lotL, lotInfo.minY(), 20);
                 buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL);
+                occupiedLots.add(new int[]{minX, minZ, minX + lotW - 1, minZ + lotL - 1});
             }
         }
+    }
+
+    private boolean intersectsOccupiedLot(List<int[]> occupiedLots, int minX, int minZ, int w, int l) {
+        int maxX = minX + w - 1;
+        int maxZ = minZ + l - 1;
+        for (int[] box : occupiedLots) {
+            if (maxX < box[0] || minX > box[2] || maxZ < box[1] || minZ > box[3]) {
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     private boolean isCenteredLotCandidate(int x, int z) {
@@ -652,7 +671,7 @@ public class HouseGenerator {
             }
         }
         int gateX = x + (w / 2);
-        region.setType(gateX, y + 1, z - 2, Material.AIR);
+        region.setType(gateX, y + 1, z - 2, Material.OAK_FENCE_GATE);
         region.setType(gateX, y + 1, z - 1, Material.AIR);
     }
 
