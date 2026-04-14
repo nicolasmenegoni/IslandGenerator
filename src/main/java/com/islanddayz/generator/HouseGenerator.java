@@ -21,25 +21,20 @@ public class HouseGenerator {
     public void populateChunk(LimitedRegion region, int chunkX, int chunkZ, Random random) {
         int startX = chunkX << 4;
         int startZ = chunkZ << 4;
+        int centerX = startX + 8;
+        int centerZ = startZ + 8;
 
-        for (int localX = 2; localX < 14; localX += 6) {
-            for (int localZ = 2; localZ < 14; localZ += 6) {
-                int centerX = startX + localX;
-                int centerZ = startZ + localZ;
+        int lotW = 18 + random.nextInt(8);
+        int lotL = 18 + random.nextInt(8);
+        int minX = centerX - lotW / 2;
+        int minZ = centerZ - lotL / 2;
 
-                int lotW = 18 + random.nextInt(8);
-                int lotL = 18 + random.nextInt(8);
-                int minX = centerX - lotW / 2;
-                int minZ = centerZ - lotL / 2;
-
-                int houseW = lotW - (4 + random.nextInt(4));
-                int houseL = lotL - (4 + random.nextInt(4));
-                int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
-                int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
-                int y = region.getHighestBlockYAt(centerX, centerZ) - 1;
-                buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
-            }
-        }
+        int houseW = lotW - (4 + random.nextInt(4));
+        int houseL = lotL - (4 + random.nextInt(4));
+        int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
+        int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
+        int y = region.getHighestBlockYAt(centerX, centerZ) - 1;
+        buildHouse(region, random, houseX, y, houseZ, houseW, houseL);
     }
 
     private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
