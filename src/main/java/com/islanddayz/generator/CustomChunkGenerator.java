@@ -44,6 +44,9 @@ public class CustomChunkGenerator extends ChunkGenerator {
                 }
 
                 double cityInfluence = cityGenerator.cityInfluence(worldX, worldZ);
+                if ((worldX * worldX) + (worldZ * worldZ) < (170 * 170)) {
+                    cityInfluence = Math.max(cityInfluence, 0.35);
+                }
                 int topY = terrainGenerator.computeHeight(worldX, worldZ, islandMask, SEA_LEVEL, cityInfluence);
                 int coastStairTop = getCoastStairTop(worldX, worldZ, islandMask, cityInfluence);
                 if (coastStairTop > Integer.MIN_VALUE) {
@@ -83,7 +86,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
 
         if (cityInfluence > 0.12) {
-            return y >= topY - 3 ? Material.DIRT : Material.STONE;
+            return y >= topY - 3 ? Material.GRASS_BLOCK : Material.STONE;
         }
 
         if (isBeachLayer(worldX, worldZ, y, topY, islandMask, cityInfluence)) {
@@ -91,7 +94,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
 
         if (y >= topY - 4) {
-            return Material.DIRT;
+            return Material.GRASS_BLOCK;
         }
 
         return Material.STONE;
@@ -141,7 +144,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
 
         if (topY <= SEA_LEVEL + 17) {
-            return Material.COARSE_DIRT;
+            return Material.GRASS_BLOCK;
         }
 
         return Material.GRASS_BLOCK;

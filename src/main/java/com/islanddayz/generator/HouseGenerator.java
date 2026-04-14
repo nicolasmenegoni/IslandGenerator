@@ -32,7 +32,11 @@ public class HouseGenerator {
         for (int villageIndex = 0; villageIndex < cityGenerator.villageCount(); villageIndex++) {
             int cx = cityGenerator.villageCenterX(villageIndex);
             int cz = cityGenerator.villageCenterZ(villageIndex);
+            if ((cx * cx) + (cz * cz) < (170 * 170)) {
+                continue;
+            }
             int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
+            WoodPalette palette = woodPalette(villageIndex);
             for (int[] plot : plots) {
                 int centerX = cx + plot[0];
                 int centerZ = cz + plot[1];
@@ -60,7 +64,7 @@ public class HouseGenerator {
                 int houseX = minX + 2 + random.nextInt(Math.max(1, lotW - houseW - 3));
                 int houseZ = minZ + 2 + random.nextInt(Math.max(1, lotL - houseL - 3));
                 prepareLotSurface(region, minX, minZ, lotW, lotL, lotInfo.minY(), 20);
-                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL);
+                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette);
                 occupiedLots.add(new int[]{minX, minZ, minX + lotW - 1, minZ + lotL - 1});
             }
         }
@@ -93,7 +97,10 @@ public class HouseGenerator {
     }
 
     private boolean isCenteredLotCandidate(int x, int z) {
-        if (cityGenerator.cityInfluence(x, z) < 0.5 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
+        if ((x * x) + (z * z) < (170 * 170)) {
+            return false;
+        }
+        if (cityGenerator.cityInfluence(x, z) < 0.45 || cityGenerator.getRoadType(x, z) != CityGenerator.RoadType.NONE) {
             return false;
         }
 
@@ -102,8 +109,8 @@ public class HouseGenerator {
         int west = distanceToRoad(x, z, -1, 0, 48);
         int east = distanceToRoad(x, z, 1, 0, 48);
 
-        boolean hasRoads = north > 2 && south > 2 && west > 2 && east > 2;
-        boolean balanced = Math.abs(north - south) <= 12 && Math.abs(west - east) <= 12;
+        boolean hasRoads = north <= 14 || south <= 14 || west <= 14 || east <= 14;
+        boolean balanced = Math.abs(north - south) <= 24 && Math.abs(west - east) <= 24;
         return hasRoads && balanced;
     }
 
@@ -151,18 +158,13 @@ public class HouseGenerator {
         }
     }
 
-    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
-        Material[] wallChoices = {Material.BRICKS, Material.OAK_PLANKS, Material.SPRUCE_PLANKS, Material.GREEN_WOOL, Material.CYAN_WOOL, Material.ORANGE_TERRACOTTA};
-        Material[] roofChoices = {Material.DARK_OAK_STAIRS, Material.SPRUCE_STAIRS, Material.STONE_BRICK_STAIRS};
-        Material[] floorChoices = {Material.SMOOTH_STONE, Material.STONE, Material.STONE_BRICKS, Material.POLISHED_GRANITE, Material.ANDESITE};
+    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette) {
+        Material wall = palette.wall();
+        Material roofStair = palette.roofStair();
+        Material floor = palette.floor();
         Material[] windowChoices = {Material.GLASS, Material.TINTED_GLASS, Material.WHITE_STAINED_GLASS, Material.GRAY_STAINED_GLASS};
-        Material[] doorChoices = {Material.OAK_DOOR, Material.SPRUCE_DOOR, Material.BIRCH_DOOR, Material.DARK_OAK_DOOR, Material.JUNGLE_DOOR};
-
-        Material wall = wallChoices[random.nextInt(wallChoices.length)];
-        Material roofStair = roofChoices[random.nextInt(roofChoices.length)];
-        Material floor = floorChoices[random.nextInt(floorChoices.length)];
         Material window = windowChoices[random.nextInt(windowChoices.length)];
-        Material doorMaterial = doorChoices[random.nextInt(doorChoices.length)];
+        Material doorMaterial = palette.door();
 
         int floorHeight = 5 + random.nextInt(2);
         boolean secondFloor = random.nextDouble() < 0.35;
@@ -184,7 +186,7 @@ public class HouseGenerator {
 
         if (secondFloor) {
             int secondY = y + floorHeight;
-            buildAdaptiveFloor(region, x + 1, secondY, z + 1, w - 2, l - 2, floorChoices[random.nextInt(floorChoices.length)], false);
+            buildAdaptiveFloor(region, x + 1, secondY, z + 1, w - 2, l - 2, floor, false);
             buildOuterWalls(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall);
             carveWindows(region, random, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, window);
             buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, doorMaterial, false);
@@ -698,5 +700,17 @@ public class HouseGenerator {
     }
 
     private record LotInfo(boolean buildable, int minY, int maxY) {
+    }
+
+    private WoodPalette woodPalette(int villageIndex) {
+        return switch (Math.floorMod(villageIndex, 4)) {
+            case 0 -> new WoodPalette(Material.OAK_PLANKS, Material.OAK_PLANKS, Material.OAK_STAIRS, Material.OAK_DOOR);
+            case 1 -> new WoodPalette(Material.SPRUCE_PLANKS, Material.SPRUCE_PLANKS, Material.SPRUCE_STAIRS, Material.SPRUCE_DOOR);
+            case 2 -> new WoodPalette(Material.BIRCH_PLANKS, Material.BIRCH_PLANKS, Material.BIRCH_STAIRS, Material.BIRCH_DOOR);
+            default -> new WoodPalette(Material.JUNGLE_PLANKS, Material.JUNGLE_PLANKS, Material.JUNGLE_STAIRS, Material.JUNGLE_DOOR);
+        };
+    }
+
+    private record WoodPalette(Material wall, Material floor, Material roofStair, Material door) {
     }
 }

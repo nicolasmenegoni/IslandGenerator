@@ -58,6 +58,9 @@ public class CityGenerator {
     }
 
     public RoadType getRoadType(int x, int z) {
+        if ((x * x) + (z * z) < (170 * 170)) {
+            return RoadType.NONE;
+        }
         double influence = cityInfluence(x, z);
         if (influence <= 0.52) {
             return RoadType.NONE;
