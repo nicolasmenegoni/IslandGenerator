@@ -105,6 +105,9 @@ public class HouseGenerator {
                 int occMinZ = houseZ - enclosureOffset - houseSpacing;
                 int occMaxX = houseX + houseW - 1 + enclosureOffset + houseSpacing;
                 int occMaxZ = houseZ + houseL - 1 + enclosureOffset + houseSpacing;
+                if (houseOverlapsRoad(houseX, houseZ, houseW, houseL)) {
+                    continue;
+                }
                 if (!mandatoryVillageHouse && intersectsOccupiedLot(occupiedLots, occMinX, occMinZ, occMaxX, occMaxZ)) {
                     continue;
                 }
@@ -599,9 +602,11 @@ public class HouseGenerator {
         if (singleLanternFloor) {
             for (int xx = x + 1; xx <= x + w - 2; xx++) {
                 for (int zz = z + 1; zz <= z + l - 2; zz++) {
-                    Material current = region.getType(xx, lanternY, zz);
-                    if (current == Material.LANTERN || current == Material.SOUL_LANTERN) {
-                        region.setType(xx, lanternY, zz, Material.AIR);
+                    for (int yy = y + 1; yy <= y + 8; yy++) {
+                        Material current = region.getType(xx, yy, zz);
+                        if (current == Material.LANTERN || current == Material.SOUL_LANTERN) {
+                            region.setType(xx, yy, zz, Material.AIR);
+                        }
                     }
                 }
             }
@@ -723,10 +728,6 @@ public class HouseGenerator {
             setFacingBlock(region, pos[0], y, pos[1], mat, BlockFace.WEST);
             placed++;
 
-            boolean canDouble = (mat == Material.CHEST || mat == Material.TRAPPED_CHEST) && random.nextDouble() < 0.35;
-            if (canDouble && region.getType(pos[0] + 1, y, pos[1]).isAir()) {
-                region.setType(pos[0] + 1, y, pos[1], mat);
-            }
         }
 
         if (placed == 0) {
@@ -769,19 +770,23 @@ public class HouseGenerator {
     }
 
     private void placeBookshelves(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
-        int[][] shelfSpots = {
-                {x + 1, z + 2},
-                {x + w - 2, z + 2},
-                {x + 1, z + l - 3},
-                {x + w - 2, z + l - 3}
-        };
-        int shelves = random.nextDouble() < 0.4 ? 2 : 1;
-        int placed = 0;
-        for (int i = 0; i < shelfSpots.length && placed < shelves; i++) {
-            int[] spot = shelfSpots[(i + random.nextInt(shelfSpots.length)) % shelfSpots.length];
-            if (region.getType(spot[0], y, spot[1]).isAir()) {
-                region.setType(spot[0], y, spot[1], Material.BOOKSHELF);
-                placed++;
+        int shape = random.nextInt(4);
+        int width = (shape == 0 || shape == 2) ? 2 : 1;
+        int height = (shape <= 1) ? 2 : 3;
+        int baseX = random.nextBoolean() ? x + 1 : x + w - 2;
+        int baseZ = random.nextBoolean() ? z + 2 : z + l - 3;
+        for (int dy = 0; dy < height; dy++) {
+            for (int dx = 0; dx < width; dx++) {
+                int shelfX = baseX;
+                int shelfZ = baseZ;
+                if (baseX == x + 1 || baseX == x + w - 2) {
+                    shelfZ = Math.max(z + 1, Math.min(z + l - 2, baseZ + dx));
+                } else {
+                    shelfX = Math.max(x + 1, Math.min(x + w - 2, baseX + dx));
+                }
+                if (region.getType(shelfX, y + dy, shelfZ).isAir()) {
+                    region.setType(shelfX, y + dy, shelfZ, Material.BOOKSHELF);
+                }
             }
         }
     }
@@ -858,6 +863,7 @@ public class HouseGenerator {
         org.bukkit.block.data.type.Gate gate = (org.bukkit.block.data.type.Gate) Bukkit.createBlockData(Material.OAK_FENCE_GATE);
         gate.setFacing(entryFacing);
         gate.setOpen(true);
+        gate.setInWall(true);
         region.setBlockData(gateX, y, gateZ, gate);
         if (entryFacing == BlockFace.NORTH || entryFacing == BlockFace.SOUTH) {
             int pathStart = Math.min(gateZ, z + (entryFacing == BlockFace.NORTH ? -1 : l));
@@ -991,6 +997,17 @@ public class HouseGenerator {
         int maxZ = z + l - 1 + minDistance;
         for (int xx = minX; xx <= maxX; xx++) {
             for (int zz = minZ; zz <= maxZ; zz++) {
+                if (cityGenerator.getRoadType(xx, zz) != CityGenerator.RoadType.NONE) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean houseOverlapsRoad(int x, int z, int w, int l) {
+        for (int xx = x; xx < x + w; xx++) {
+            for (int zz = z; zz < z + l; zz++) {
                 if (cityGenerator.getRoadType(xx, zz) != CityGenerator.RoadType.NONE) {
                     return true;
                 }
