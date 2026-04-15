@@ -767,18 +767,8 @@ public class HouseGenerator {
     }
 
     private boolean isMountainVillage(int x, int z) {
-        int[][] peaks = {
-                {280, 260, 190},
-                {-320, 180, 185},
-                {250, -300, 195}
-        };
-        for (int[] peak : peaks) {
-            int dx = x - peak[0];
-            int dz = z - peak[1];
-            if ((dx * dx) + (dz * dz) <= peak[2] * peak[2]) {
-                return true;
-            }
-        }
-        return false;
+        int dx = x - 300;
+        int dz = z - 250;
+        return (dx * dx) + (dz * dz) <= 220 * 220;
     }
 }

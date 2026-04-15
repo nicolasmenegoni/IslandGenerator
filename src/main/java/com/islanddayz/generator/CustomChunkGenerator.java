@@ -183,20 +183,15 @@ public class CustomChunkGenerator extends ChunkGenerator {
         if (islandMask < 0.6) {
             return;
         }
-        int[][] peaks = {
-                {280, 260, 74},
-                {-320, 180, 72},
-                {250, -300, 76}
-        };
-        for (int[] peak : peaks) {
-            int dx = worldX - peak[0];
-            int dz = worldZ - peak[1];
-            double dist2 = dx * (double) dx + dz * (double) dz;
-            if (dist2 > peak[2] * peak[2]) {
-                continue;
-            }
-            int entryX = peak[0] + peak[2] - 6;
-            int entryZ = peak[1];
+        int peakX = 300;
+        int peakZ = 250;
+        int peakRadius = 86;
+        int dx = worldX - peakX;
+        int dz = worldZ - peakZ;
+        double dist2 = dx * (double) dx + dz * (double) dz;
+        if (dist2 <= peakRadius * peakRadius) {
+            int entryX = peakX + peakRadius - 8;
+            int entryZ = peakZ - 4;
             int tunnelY = SEA_LEVEL + 22;
             for (int t = 0; t <= 46; t++) {
                 int cx = entryX - t;

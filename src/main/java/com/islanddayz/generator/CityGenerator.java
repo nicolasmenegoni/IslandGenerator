@@ -10,10 +10,13 @@ public class CityGenerator {
 
     private static final int[][] CITY_CENTERS = {
             {0, 0},
-            {-300, 220},
-            {320, -200},
-            {220, 330},
-            {-360, -280}
+            {-420, 260},
+            {420, -260},
+            {260, 420},
+            {-440, -360},
+            {120, -480},
+            {-160, 470},
+            {500, 130}
     };
     private static final int[] LOT_PATTERN_X = {8, 10, 12, 14, 9, 11, 13, 15};
     private static final int[] LOT_PATTERN_Z = {8, 11, 9, 12, 10, 13, 9, 14};
@@ -89,21 +92,21 @@ public class CityGenerator {
     }
 
     private boolean isOnVillageRoad(int pattern, double x, double z) {
-        boolean main = Math.abs(x) <= 1.3 && z >= -34 && z <= 34;
+        boolean main = Math.abs(x) <= 1.3 && z >= -42 && z <= 42;
         if (!main && pattern == 0) {
-            boolean b1 = Math.abs(z + 12) <= 1.3 && x >= -24 && x <= 0;
-            boolean b2 = Math.abs(z - 6) <= 1.3 && x >= 0 && x <= 18;
-            boolean b3 = Math.abs(z - 22) <= 1.3 && x >= 0 && x <= 24;
+            boolean b1 = Math.abs(z + 14) <= 1.3 && x >= -28 && x <= 0;
+            boolean b2 = Math.abs(z - 8) <= 1.3 && x >= 0 && x <= 24;
+            boolean b3 = Math.abs(z - 26) <= 1.3 && x >= 0 && x <= 30;
             return b1 || b2 || b3;
         }
         if (!main && pattern == 1) {
-            boolean b1 = Math.abs(z - 10) <= 1.3 && x >= -8 && x <= 26;
-            boolean b2 = Math.abs(z + 4) <= 1.3 && x >= 0 && x <= 16;
+            boolean b1 = Math.abs(z - 12) <= 1.3 && x >= -12 && x <= 30;
+            boolean b2 = Math.abs(z + 6) <= 1.3 && x >= 0 && x <= 20;
             return b1 || b2;
         }
         if (!main && pattern == 2) {
-            boolean b1 = Math.abs(z + 16) <= 1.3 && x >= -24 && x <= 24;
-            boolean b2 = Math.abs(z - 12) <= 1.3 && x >= -26 && x <= 26;
+            boolean b1 = Math.abs(z + 18) <= 1.3 && x >= -30 && x <= 30;
+            boolean b2 = Math.abs(z - 14) <= 1.3 && x >= -32 && x <= 32;
             return b1 || b2;
         }
         return main;
@@ -121,10 +124,10 @@ public class CityGenerator {
     }
 
     private double irregularRadiusForCity(int x, int z, double angle, int cityIndex) {
-        return 64
-                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 5
-                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 3
-                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 6;
+        return 56
+                + Math.sin(angle * (2.0 + cityIndex * 0.25)) * 4
+                + Math.sin(angle * (4.6 + cityIndex * 0.2)) * 2.5
+                + shapeNoise.noise((x + cityIndex * 300) * 0.006, (z - cityIndex * 300) * 0.006) * 5;
     }
 
     private int nearestCityIndex(int x, int z) {
@@ -213,18 +216,8 @@ public class CityGenerator {
     }
 
     private boolean isMountainRegion(int x, int z) {
-        int[][] peaks = {
-                {280, 260, 190},
-                {-320, 180, 185},
-                {250, -300, 195}
-        };
-        for (int[] peak : peaks) {
-            int dx = x - peak[0];
-            int dz = z - peak[1];
-            if ((dx * dx) + (dz * dz) <= peak[2] * peak[2]) {
-                return true;
-            }
-        }
-        return false;
+        int dx = x - 300;
+        int dz = z - 250;
+        return (dx * dx) + (dz * dz) <= 220 * 220;
     }
 }

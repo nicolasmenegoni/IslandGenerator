@@ -27,6 +27,9 @@ public class TerrainGenerator {
 
         double blend = Math.max(0.0, Math.min(1.0, cityInfluence));
         double result = natural * (1.0 - blend) + urban * blend;
+        if (cityInfluence > 0.2) {
+            result = urban;
+        }
 
         result += giantMountainBoost(x, z, islandMask, seaLevel);
         return Math.max(seaLevel + 1, (int) Math.round(result));
@@ -36,22 +39,15 @@ public class TerrainGenerator {
         if (islandMask < 0.58) {
             return 0.0;
         }
-        int[][] peaks = {
-                {280, 260, 160},
-                {-320, 180, 150},
-                {250, -300, 170}
-        };
-        double boost = 0.0;
-        for (int[] peak : peaks) {
-            double dx = x - peak[0];
-            double dz = z - peak[1];
-            double dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist > peak[2]) {
-                continue;
-            }
-            double t = 1.0 - (dist / peak[2]);
-            boost = Math.max(boost, t * t * (seaLevel + 42));
+        double dx = x - 300;
+        double dz = z - 250;
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        double peakRadius = 220;
+        if (dist > peakRadius) {
+            return 0.0;
         }
-        return boost;
+        double t = 1.0 - (dist / peakRadius);
+        double irregular = 0.75 + (hillsNoise.noise(x * 0.018, z * 0.018) * 0.25);
+        return t * t * (seaLevel + 52) * irregular;
     }
 }
