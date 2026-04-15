@@ -16,7 +16,11 @@ public class CityGenerator {
             {-440, -360},
             {120, -480},
             {-160, 470},
-            {500, 130}
+            {500, 130},
+            {-560, 60},
+            {560, -40},
+            {360, -520},
+            {-320, 560}
     };
     private static final int[] LOT_PATTERN_X = {8, 10, 12, 14, 9, 11, 13, 15};
     private static final int[] LOT_PATTERN_Z = {8, 11, 9, 12, 10, 13, 9, 14};

@@ -1,6 +1,7 @@
 package com.islanddayz.generator;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Bisected;
@@ -10,7 +11,10 @@ import org.bukkit.block.data.type.Door;
 import org.bukkit.block.data.type.Ladder;
 import org.bukkit.block.data.type.Lantern;
 import org.bukkit.block.data.type.Stairs;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.generator.LimitedRegion;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -261,7 +265,7 @@ public class HouseGenerator {
             decorateInterior(region, random, x + 1, secondY, z + 1, w - 2, l - 2, false, false, true);
             buildTriangularRoof(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, roofStair, wall);
             if (hasChimney || random.nextDouble() < 0.22) {
-                buildChimney(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2);
+                buildChimney(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, y);
             }
             if (random.nextDouble() < 0.35) {
                 buildLadderBetweenFloors(region, x + 2, y + 1, z + 2, floorHeight);
@@ -272,18 +276,19 @@ public class HouseGenerator {
         } else {
             buildTriangularRoof(region, x, y + floorHeight, z, w, l, roofStair, wall);
             if (hasChimney || random.nextDouble() < 0.18) {
-                buildChimney(region, x, y + floorHeight, z, w, l);
+                buildChimney(region, x, y + floorHeight, z, w, l, y);
             }
         }
     }
 
-    private void buildChimney(LimitedRegion region, int x, int roofBaseY, int z, int w, int l) {
+    private void buildChimney(LimitedRegion region, int x, int roofBaseY, int z, int w, int l, int floorY) {
         int chimneyX = x + 2;
         int chimneyZ = z + 2;
         int topY = roofBaseY + 5;
-        for (int yy = roofBaseY; yy <= topY; yy++) {
+        for (int yy = floorY + 1; yy <= topY; yy++) {
             region.setType(chimneyX, yy, chimneyZ, Material.BRICKS);
         }
+        region.setType(chimneyX, floorY, chimneyZ, Material.BLAST_FURNACE);
         region.setType(chimneyX, topY + 1, chimneyZ, Material.CAMPFIRE);
     }
 
@@ -580,15 +585,17 @@ public class HouseGenerator {
     private void decorateInterior(LimitedRegion region, Random random, int x, int y, int z, int w, int l, boolean includeKitchen, boolean allowWallTorch, boolean singleLanternFloor) {
         Material[] carpets = {Material.RED_CARPET, Material.GREEN_CARPET, Material.CYAN_CARPET, Material.GRAY_CARPET};
         Material carpetColor = carpets[random.nextInt(carpets.length)];
+        Material bedMaterial = bedForCarpet(carpetColor);
         int roomY = y + 1;
 
         placeCornerWorkTable(region, random, x, roomY, z, w, l);
         if (includeKitchen) {
             placeKitchen(region, x, roomY, z, w, l);
         }
-        placeBedroomBeds(region, random, x, roomY, z, w, l);
+        placeBedroomBeds(region, random, x, roomY, z, w, l, bedMaterial);
         placeBookshelves(region, random, x, roomY, z, w, l);
         placeStorageVariation(region, random, x, roomY, z, w, l);
+        placeArmorStandDisplay(region, random, x, roomY, z, w, l);
 
         placeCarpetPattern(region, random, x, y, z, w, l, carpetColor);
 
@@ -745,27 +752,87 @@ public class HouseGenerator {
         return material != null ? material : fallback;
     }
 
-    private void placeBedroomBeds(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
-        Material[] bedColors = {
-                Material.RED_BED, Material.BLUE_BED, Material.GREEN_BED, Material.YELLOW_BED,
-                Material.WHITE_BED, Material.GRAY_BED, Material.CYAN_BED, Material.ORANGE_BED
+    private Material bedForCarpet(Material carpet) {
+        return switch (carpet) {
+            case RED_CARPET -> Material.RED_BED;
+            case GREEN_CARPET -> Material.GREEN_BED;
+            case CYAN_CARPET -> Material.CYAN_BED;
+            case GRAY_CARPET -> Material.GRAY_BED;
+            default -> Material.WHITE_BED;
         };
-        Material bedMaterial = bedColors[random.nextInt(bedColors.length)];
-        int bx = x + 2;
-        int bz = z + l - 4;
-        if (canPlaceBed(region, bx, y, bz, BlockFace.SOUTH)) {
-            placeBed(region, bx, y, bz, BlockFace.SOUTH, bedMaterial);
-        } else if (canPlaceBed(region, x + w - 3, y, z + l - 4, BlockFace.SOUTH)) {
-            placeBed(region, x + w - 3, y, z + l - 4, BlockFace.SOUTH, bedMaterial);
-            bx = x + w - 3;
-            bz = z + l - 4;
-        }
+    }
 
-        if (random.nextDouble() < 0.35) {
-            int secondX = bx + 1;
-            if (canPlaceBed(region, secondX, y, bz, BlockFace.SOUTH)) {
-                placeBed(region, secondX, y, bz, BlockFace.SOUTH, bedMaterial);
+    private void placeArmorStandDisplay(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
+        if (random.nextDouble() > 0.35) {
+            return;
+        }
+        int[][] spots = {
+                {x + 2, z + 2},
+                {x + w - 3, z + 2},
+                {x + 2, z + l - 3},
+                {x + w - 3, z + l - 3}
+        };
+        int[] pos = spots[random.nextInt(spots.length)];
+        if (!region.getType(pos[0], y, pos[1]).isAir() || !region.getType(pos[0], y + 1, pos[1]).isAir()) {
+            return;
+        }
+        org.bukkit.World world = Bukkit.getWorld("ilha_dayz");
+        if (world == null) {
+            return;
+        }
+        Location location = new Location(world, pos[0] + 0.5, y, pos[1] + 0.5);
+        if (!region.isInRegion(pos[0], y, pos[1])) {
+            return;
+        }
+        org.bukkit.entity.Entity entity = region.spawnEntity(location, EntityType.ARMOR_STAND);
+        if (!(entity instanceof ArmorStand stand)) {
+            return;
+        }
+        stand.setArms(true);
+        stand.setBasePlate(false);
+        int roll = random.nextInt(100);
+        int tier = roll < 55 ? 0 : roll < 75 ? 1 : roll < 90 ? 2 : roll < 97 ? 3 : 4;
+        String tierName = switch (tier) {
+            case 0 -> "LEATHER";
+            case 1 -> "CHAINMAIL";
+            case 2 -> "IRON";
+            case 3 -> "GOLDEN";
+            default -> "DIAMOND";
+        };
+        if (random.nextBoolean()) stand.getEquipment().setHelmet(new ItemStack(Material.valueOf(tierName + "_HELMET")));
+        if (random.nextBoolean()) stand.getEquipment().setChestplate(new ItemStack(Material.valueOf(tierName + "_CHESTPLATE")));
+        if (random.nextBoolean()) stand.getEquipment().setLeggings(new ItemStack(Material.valueOf(tierName + "_LEGGINGS")));
+        if (random.nextBoolean()) stand.getEquipment().setBoots(new ItemStack(Material.valueOf(tierName + "_BOOTS")));
+    }
+
+    private void placeBedroomBeds(LimitedRegion region, Random random, int x, int y, int z, int w, int l, Material bedMaterial) {
+        int[][] candidates = {
+                {x + 2, z + 1, BlockFace.SOUTH.ordinal()},
+                {x + w - 3, z + 1, BlockFace.SOUTH.ordinal()},
+                {x + 1, z + 2, BlockFace.EAST.ordinal()},
+                {x + 1, z + l - 3, BlockFace.EAST.ordinal()},
+                {x + w - 2, z + 2, BlockFace.WEST.ordinal()},
+                {x + w - 2, z + l - 3, BlockFace.WEST.ordinal()},
+                {x + 2, z + l - 2, BlockFace.NORTH.ordinal()},
+                {x + w - 3, z + l - 2, BlockFace.NORTH.ordinal()}
+        };
+
+        int placed = 0;
+        int start = random.nextInt(candidates.length);
+        for (int i = 0; i < candidates.length && placed < 2; i++) {
+            int[] candidate = candidates[(start + i) % candidates.length];
+            int bx = candidate[0];
+            int bz = candidate[1];
+            BlockFace facing = BlockFace.values()[candidate[2]];
+            if (!canPlaceBed(region, bx, y, bz, facing)) {
+                continue;
             }
+            placeBed(region, bx, y, bz, facing, bedMaterial);
+            placed++;
+            if (placed == 1 && random.nextDouble() < 0.65) {
+                continue;
+            }
+            break;
         }
     }
 
@@ -794,7 +861,12 @@ public class HouseGenerator {
     private boolean canPlaceBed(LimitedRegion region, int x, int y, int z, BlockFace facing) {
         int hx = x + facing.getModX();
         int hz = z + facing.getModZ();
-        return region.getType(x, y, z).isAir() && region.getType(hx, y, hz).isAir();
+        int backX = x - facing.getModX();
+        int backZ = z - facing.getModZ();
+        boolean baseFree = region.getType(x, y, z).isAir() && region.getType(hx, y, hz).isAir();
+        boolean headFree = region.getType(x, y + 1, z).isAir() && region.getType(hx, y + 1, hz).isAir();
+        boolean againstWall = !region.getType(backX, y, backZ).isAir();
+        return baseFree && headFree && againstWall;
     }
 
     private void placeBed(LimitedRegion region, int x, int y, int z, BlockFace facing, Material bedMaterial) {
