@@ -3,7 +3,7 @@ package com.islanddayz.generator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class CityGenerator {
-    public enum RoadType { NONE, MAIN, DIRT }
+    public enum RoadType { NONE, DIRT, SAND }
 
     private static final int ROAD_WIDTH = 5;
     private static final int AXIS_OFFSET = 1200;
@@ -86,46 +86,34 @@ public class CityGenerator {
         double wx = localX + warpX(localX, localZ);
         double wz = localZ + warpZ(localX, localZ);
 
-        int pattern = villagePattern(cityIndex);
-        boolean onRoad = isOnVillageRoad(pattern, wx, wz);
-        return onRoad ? RoadType.DIRT : RoadType.NONE;
+        boolean onRoad = isOnVillageRoad(cityIndex, wx, wz);
+        if (!onRoad) {
+            return RoadType.NONE;
+        }
+        return usesSandRoads(cityIndex) ? RoadType.SAND : RoadType.DIRT;
     }
 
     public boolean isRoadStripe(int x, int z) {
         return false;
     }
 
-    private boolean isOnVillageRoad(int pattern, double x, double z) {
-        boolean main = Math.abs(x) <= 1.3 && z >= -42 && z <= 42;
-        if (!main && pattern == 0) {
-            boolean b1 = Math.abs(z + 14) <= 1.3 && x >= -28 && x <= 0;
-            boolean b2 = Math.abs(z - 8) <= 1.3 && x >= 0 && x <= 24;
-            boolean b3 = Math.abs(z - 26) <= 1.3 && x >= 0 && x <= 30;
-            return b1 || b2 || b3;
-        }
-        if (!main && pattern == 1) {
-            boolean b1 = Math.abs(z - 12) <= 1.3 && x >= -12 && x <= 30;
-            boolean b2 = Math.abs(z + 6) <= 1.3 && x >= 0 && x <= 20;
-            return b1 || b2;
-        }
-        if (!main && pattern == 2) {
-            boolean b1 = Math.abs(z + 18) <= 1.3 && x >= -30 && x <= 30;
-            boolean b2 = Math.abs(z - 14) <= 1.3 && x >= -32 && x <= 32;
-            return b1 || b2;
-        }
-        if (!main && pattern == 3) {
-            boolean outerNorth = Math.abs(z + 16) <= 1.4 && x >= -14 && x <= 14;
-            boolean outerSouth = Math.abs(z - 24) <= 1.4 && x >= -14 && x <= 14;
-            boolean outerWest = Math.abs(x + 14) <= 1.4 && z >= -16 && z <= 24;
-            boolean outerEast = Math.abs(x - 14) <= 1.4 && z >= -16 && z <= 24;
-            boolean westSpurTop = Math.abs(z + 2) <= 1.3 && x >= -26 && x <= -14;
-            boolean westSpurBottom = Math.abs(z - 14) <= 1.3 && x >= -26 && x <= -14;
-            boolean eastSpurTop = Math.abs(z + 2) <= 1.3 && x >= 14 && x <= 26;
-            boolean eastSpurBottom = Math.abs(z - 14) <= 1.3 && x >= 14 && x <= 26;
-            return outerNorth || outerSouth || outerWest || outerEast
-                    || westSpurTop || westSpurBottom || eastSpurTop || eastSpurBottom;
-        }
-        return main;
+    private boolean isOnVillageRoad(int villageIndex, double x, double z) {
+        double half = usesWideRoads(villageIndex) ? 1.9 : 1.4; // 4x4 ou 3x3
+        boolean crossHorizontal = Math.abs(z) <= half && x >= -42 && x <= 42;
+        boolean crossVertical = Math.abs(x) <= half && z >= -42 && z <= 42;
+        boolean upper = Math.abs(z + 16) <= half && x >= -10 && x <= 30;
+        boolean middle = Math.abs(z + 4) <= half && x >= -8 && x <= 30;
+        boolean lower = Math.abs(z - 20) <= half && x >= 0 && x <= 30;
+        boolean lowerLeft = Math.abs(z - 32) <= half && x >= -24 && x <= 0;
+        return crossHorizontal || crossVertical || upper || middle || lower || lowerLeft;
+    }
+
+    private boolean usesWideRoads(int villageIndex) {
+        return (villageIndex & 1) == 0;
+    }
+
+    private boolean usesSandRoads(int villageIndex) {
+        return (villageIndex % 3) == 1;
     }
 
 

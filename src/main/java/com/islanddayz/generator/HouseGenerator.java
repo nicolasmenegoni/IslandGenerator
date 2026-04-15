@@ -25,7 +25,6 @@ public class HouseGenerator {
     private static final HouseStyle[] STYLE_ROTATION = {
             HouseStyle.SINGLE_STORY,
             HouseStyle.TWO_STORY,
-            HouseStyle.FENCED,
             HouseStyle.CHIMNEY
     };
 
@@ -50,15 +49,19 @@ public class HouseGenerator {
                 continue;
             }
             int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
-            if (cityGenerator.villagePattern(villageIndex) == 3) {
-                populateCentralFarm(region, cx, cz, startX, endX, startZ, endZ);
-            }
+            int farmLotIndex = Math.floorMod(villageIndex * 3 + 1, plots.length);
+            populateVillageLights(region, cx, cz, startX, endX, startZ, endZ, woodPalette(villageIndex));
+            populateGuardTower(region, cx, cz, startX, endX, startZ, endZ, woodPalette(villageIndex), villageIndex);
             WoodPalette palette = woodPalette(villageIndex);
             populateVillageTrees(region, palette, cx, cz, startX, endX, startZ, endZ);
             for (int plotIndex = 0; plotIndex < plots.length; plotIndex++) {
                 int[] plot = plots[plotIndex];
                 int centerX = cx + plot[0];
                 int centerZ = cz + plot[1];
+                if (plotIndex == farmLotIndex) {
+                    populateFarmLot(region, centerX, centerZ, startX, endX, startZ, endZ);
+                    continue;
+                }
                 if (centerX < startX || centerX > endX || centerZ < startZ || centerZ > endZ) {
                     continue;
                 }
@@ -92,7 +95,7 @@ public class HouseGenerator {
 
                 HouseStyle style = houseStyleForPlot(villageIndex, plotIndex);
                 boolean secondFloor = style == HouseStyle.TWO_STORY || (style == HouseStyle.CHIMNEY && random.nextDouble() < 0.35);
-                boolean hasGarden = style == HouseStyle.FENCED || (style == HouseStyle.SINGLE_STORY && random.nextDouble() < 0.28);
+                boolean hasGarden = false;
                 boolean hasChimney = style == HouseStyle.CHIMNEY;
 
                 int houseW = secondFloor ? 14 + random.nextInt(4) : 12 + random.nextInt(4);
@@ -103,7 +106,7 @@ public class HouseGenerator {
                 }
                 int houseX = centerX - (houseW / 2);
                 int houseZ = centerZ - (houseL / 2);
-                int enclosureOffset = hasGarden ? 4 : 0;
+                int enclosureOffset = 0;
                 int houseSpacing = mandatoryVillageHouse ? 3 : 5 + random.nextInt(2);
                 int occMinX = houseX - enclosureOffset - houseSpacing;
                 int occMinZ = houseZ - enclosureOffset - houseSpacing;
@@ -115,7 +118,7 @@ public class HouseGenerator {
                 if (!mandatoryVillageHouse && intersectsOccupiedLot(occupiedLots, occMinX, occMinZ, occMaxX, occMaxZ)) {
                     continue;
                 }
-                int minRoadDistance = mandatoryVillageHouse ? 1 : (hasGarden ? 3 : 2);
+                int minRoadDistance = mandatoryVillageHouse ? 1 : 2;
                 if (!mandatoryVillageHouse && houseTooCloseToRoad(houseX, houseZ, houseW, houseL, minRoadDistance)) {
                     continue;
                 }
@@ -131,19 +134,12 @@ public class HouseGenerator {
     }
 
     private int[][] villagePlots(int pattern) {
-        return switch (pattern) {
-            case 0 -> new int[][]{
-                    {-22, -36}, {0, -36}, {22, -36}, {-22, -14}, {22, -14}, {-24, 8}, {24, 8}, {-22, 30}, {0, 34}, {22, 30}
-            };
-            case 1 -> new int[][]{
-                    {-24, -32}, {0, -32}, {24, -32}, {-24, -10}, {24, -10}, {-24, 12}, {24, 12}, {-16, 34}, {0, 36}, {16, 34}
-            };
-            case 2 -> new int[][]{
-                    {-26, -30}, {0, -30}, {26, -30}, {-24, -6}, {24, -6}, {-24, 16}, {24, 16}, {-14, 36}, {0, 38}, {14, 36}
-            };
-            default -> new int[][]{
-                    {-12, -30}, {12, -30}, {-30, -2}, {-30, 16}, {30, -2}, {30, 16}, {-12, 38}, {12, 38}
-            };
+        return new int[][]{
+                {-24, -30}, {0, -30}, {24, -30},
+                {-30, -8}, {-8, -8}, {16, -8},
+                {28, 0},
+                {-26, 16}, {-4, 16}, {22, 18},
+                {-10, 34}, {16, 34}
         };
     }
 
@@ -285,10 +281,10 @@ public class HouseGenerator {
         int chimneyX = x + 2;
         int chimneyZ = z + 2;
         int topY = roofBaseY + 5;
-        for (int yy = floorY + 1; yy <= topY; yy++) {
+        for (int yy = floorY + 2; yy <= topY; yy++) {
             region.setType(chimneyX, yy, chimneyZ, Material.BRICKS);
         }
-        region.setType(chimneyX, floorY, chimneyZ, Material.BLAST_FURNACE);
+        region.setType(chimneyX, floorY + 1, chimneyZ, Material.BLAST_FURNACE);
         region.setType(chimneyX, topY + 1, chimneyZ, Material.CAMPFIRE);
     }
 
@@ -763,7 +759,7 @@ public class HouseGenerator {
     }
 
     private void placeArmorStandDisplay(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
-        if (random.nextDouble() > 0.35) {
+        if (random.nextDouble() > 0.75) {
             return;
         }
         int[][] spots = {
@@ -772,13 +768,25 @@ public class HouseGenerator {
                 {x + 2, z + l - 3},
                 {x + w - 3, z + l - 3}
         };
-        int[] pos = spots[random.nextInt(spots.length)];
-        if (!region.getType(pos[0], y, pos[1]).isAir() || !region.getType(pos[0], y + 1, pos[1]).isAir()) {
+        int[] pos = null;
+        for (int i = 0; i < spots.length; i++) {
+            int[] candidate = spots[(i + random.nextInt(spots.length)) % spots.length];
+            if (!region.getType(candidate[0], y, candidate[1]).isAir() || !region.getType(candidate[0], y + 1, candidate[1]).isAir()) {
+                continue;
+            }
+            pos = candidate;
+            break;
+        }
+        if (pos == null) {
             return;
         }
         org.bukkit.World world = Bukkit.getWorld("ilha_dayz");
         if (world == null) {
-            return;
+            if (!Bukkit.getWorlds().isEmpty()) {
+                world = Bukkit.getWorlds().get(0);
+            } else {
+                return;
+            }
         }
         Location location = new Location(world, pos[0] + 0.5, y, pos[1] + 0.5);
         if (!region.isInRegion(pos[0], y, pos[1])) {
@@ -806,15 +814,17 @@ public class HouseGenerator {
     }
 
     private void placeBedroomBeds(LimitedRegion region, Random random, int x, int y, int z, int w, int l, Material bedMaterial) {
+        int centerX = x + (w / 2);
+        int centerZ = z + (l / 2);
         int[][] candidates = {
-                {x + 2, z + 1, BlockFace.SOUTH.ordinal()},
-                {x + w - 3, z + 1, BlockFace.SOUTH.ordinal()},
-                {x + 1, z + 2, BlockFace.EAST.ordinal()},
-                {x + 1, z + l - 3, BlockFace.EAST.ordinal()},
-                {x + w - 2, z + 2, BlockFace.WEST.ordinal()},
-                {x + w - 2, z + l - 3, BlockFace.WEST.ordinal()},
-                {x + 2, z + l - 2, BlockFace.NORTH.ordinal()},
-                {x + w - 3, z + l - 2, BlockFace.NORTH.ordinal()}
+                {x + 2, z + 1},
+                {x + w - 3, z + 1},
+                {x + 1, z + 2},
+                {x + 1, z + l - 3},
+                {x + w - 2, z + 2},
+                {x + w - 2, z + l - 3},
+                {x + 2, z + l - 2},
+                {x + w - 3, z + l - 2}
         };
 
         int placed = 0;
@@ -823,7 +833,7 @@ public class HouseGenerator {
             int[] candidate = candidates[(start + i) % candidates.length];
             int bx = candidate[0];
             int bz = candidate[1];
-            BlockFace facing = BlockFace.values()[candidate[2]];
+            BlockFace facing = facingTowardCenter(bx, bz, centerX, centerZ);
             if (!canPlaceBed(region, bx, y, bz, facing)) {
                 continue;
             }
@@ -834,6 +844,15 @@ public class HouseGenerator {
             }
             break;
         }
+    }
+
+    private BlockFace facingTowardCenter(int x, int z, int centerX, int centerZ) {
+        int dx = centerX - x;
+        int dz = centerZ - z;
+        if (Math.abs(dx) > Math.abs(dz)) {
+            return dx >= 0 ? BlockFace.EAST : BlockFace.WEST;
+        }
+        return dz >= 0 ? BlockFace.SOUTH : BlockFace.NORTH;
     }
 
     private void placeBookshelves(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
@@ -988,6 +1007,85 @@ public class HouseGenerator {
         }
     }
 
+    private void populateFarmLot(LimitedRegion region, int centerX, int centerZ, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ) {
+        int minX = centerX - 6;
+        int maxX = centerX + 6;
+        int minZ = centerZ - 6;
+        int maxZ = centerZ + 6;
+        for (int x = Math.max(minX, chunkMinX); x <= Math.min(maxX, chunkMaxX); x++) {
+            for (int z = Math.max(minZ, chunkMinZ); z <= Math.min(maxZ, chunkMaxZ); z++) {
+                int y = region.getHighestBlockYAt(x, z);
+                if ((x + z) % 5 == 0) {
+                    region.setType(x, y - 1, z, Material.WATER);
+                    region.setType(x, y, z, Material.AIR);
+                } else {
+                    region.setType(x, y - 1, z, Material.FARMLAND);
+                    if (region.getType(x, y, z).isAir()) {
+                        region.setType(x, y, z, (Math.floorMod(x * 3 + z, 2) == 0) ? Material.WHEAT : Material.CARROTS);
+                    }
+                }
+            }
+        }
+    }
+
+    private void populateVillageLights(LimitedRegion region, int cx, int cz, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ, WoodPalette palette) {
+        Material fence = switch (palette.wall()) {
+            case SPRUCE_PLANKS -> Material.SPRUCE_FENCE;
+            case BIRCH_PLANKS -> Material.BIRCH_FENCE;
+            case JUNGLE_PLANKS -> Material.JUNGLE_FENCE;
+            default -> Material.OAK_FENCE;
+        };
+        int[][] lightSpots = {
+                {-2, -28}, {2, -18}, {8, -4}, {-6, 6}, {12, 14}, {-4, 26}, {4, 38}
+        };
+        for (int[] offset : lightSpots) {
+            int x = cx + offset[0];
+            int z = cz + offset[1];
+            if (x < chunkMinX || x > chunkMaxX || z < chunkMinZ || z > chunkMaxZ) {
+                continue;
+            }
+            int y = region.getHighestBlockYAt(x, z);
+            for (int i = 0; i < 5; i++) {
+                region.setType(x, y + i, z, fence);
+            }
+            int armX = x + (offset[0] >= 0 ? -1 : 1);
+            region.setType(armX, y + 4, z, fence);
+            Lantern lantern = (Lantern) Bukkit.createBlockData(Material.LANTERN);
+            lantern.setHanging(true);
+            region.setBlockData(armX, y + 3, z, lantern);
+        }
+    }
+
+    private void populateGuardTower(LimitedRegion region, int cx, int cz, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ, WoodPalette palette, int villageIndex) {
+        int[][] corners = {{-38, -38}, {38, -38}, {-38, 38}, {38, 38}};
+        int[] pick = corners[Math.floorMod(villageIndex, corners.length)];
+        int baseX = cx + pick[0];
+        int baseZ = cz + pick[1];
+        if (baseX < chunkMinX || baseX > chunkMaxX || baseZ < chunkMinZ || baseZ > chunkMaxZ) {
+            return;
+        }
+        int y = region.getHighestBlockYAt(baseX, baseZ);
+        Material wall = palette.wall();
+        for (int yy = y; yy <= y + 6; yy++) {
+            region.setType(baseX, yy, baseZ, wall);
+        }
+        for (int yy = y + 1; yy <= y + 5; yy++) {
+            Ladder ladder = (Ladder) Bukkit.createBlockData(Material.LADDER);
+            ladder.setFacing(BlockFace.SOUTH);
+            region.setBlockData(baseX + 1, yy, baseZ, ladder);
+        }
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int yy = y + 7; yy <= y + 9; yy++) {
+                    boolean edge = Math.abs(dx) == 1 || Math.abs(dz) == 1;
+                    region.setType(baseX + dx, yy, baseZ + dz, edge ? wall : Material.AIR);
+                }
+            }
+        }
+        region.setType(baseX, y + 7, baseZ, Material.CHEST);
+        region.setType(baseX, y + 8, baseZ + 1, Material.RED_BED);
+    }
+
     private void populateVillageTrees(LimitedRegion region, WoodPalette palette, int centerX, int centerZ, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ) {
         Material log = switch (palette.wall()) {
             case SPRUCE_PLANKS -> Material.SPRUCE_LOG;
@@ -1001,16 +1099,17 @@ public class HouseGenerator {
             case JUNGLE_LOG -> Material.JUNGLE_LEAVES;
             default -> Material.OAK_LEAVES;
         };
-        int[][] offsets = {
-                {-44, -36}, {0, -46}, {44, -36}, {-52, -6}, {52, -6}, {-52, 22}, {52, 22}, {-30, 48}, {0, 54}, {30, 48}
-        };
-        for (int[] offset : offsets) {
-            int x = centerX + offset[0];
-            int z = centerZ + offset[1];
+        Random treeRandom = new Random((centerX * 341873128712L) ^ (centerZ * 132897987541L) ^ (chunkMinX * 31L + chunkMinZ));
+        for (int attempt = 0; attempt < 20; attempt++) {
+            int x = centerX + treeRandom.nextInt(86) - 43;
+            int z = centerZ + treeRandom.nextInt(86) - 43;
             if (x < chunkMinX || x > chunkMaxX || z < chunkMinZ || z > chunkMaxZ) {
                 continue;
             }
             int y = region.getHighestBlockYAt(x, z);
+            if (region.getType(x, y - 1, z) != Material.GRASS_BLOCK || !region.getType(x, y, z).isAir()) {
+                continue;
+            }
             for (int yy = y + 1; yy <= y + 4; yy++) {
                 region.setType(x, yy, z, log);
             }
@@ -1097,7 +1196,6 @@ public class HouseGenerator {
     private enum HouseStyle {
         SINGLE_STORY,
         TWO_STORY,
-        FENCED,
         CHIMNEY
     }
 }

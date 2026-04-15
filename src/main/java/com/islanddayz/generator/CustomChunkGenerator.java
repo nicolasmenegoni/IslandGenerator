@@ -133,8 +133,11 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private Material pickTopMaterial(int x, int z, int topY, double islandMask, boolean insideCity) {
         if (insideCity) {
             CityGenerator.RoadType roadType = cityGenerator.getRoadType(x, z);
-            if (roadType == CityGenerator.RoadType.MAIN || roadType == CityGenerator.RoadType.DIRT) {
+            if (roadType == CityGenerator.RoadType.DIRT) {
                 return Material.DIRT_PATH;
+            }
+            if (roadType == CityGenerator.RoadType.SAND) {
+                return Material.SAND;
             }
             return Material.GRASS_BLOCK;
         }
