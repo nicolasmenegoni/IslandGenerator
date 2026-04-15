@@ -71,22 +71,15 @@ public class CityGenerator {
         if (isMountainRegion(x, z)) {
             return RoadType.NONE;
         }
-        double influence = cityInfluence(x, z);
-        if (influence <= 0.52) {
-            return RoadType.NONE;
-        }
-
         int cityIndex = nearestCityIndex(x, z);
         int localX = x - CITY_CENTERS[cityIndex][0];
         int localZ = z - CITY_CENTERS[cityIndex][1];
-
-        if (cityEdgeDistance(x, z, cityIndex) < 8.0) {
+        double radial = Math.sqrt(localX * (double) localX + localZ * (double) localZ);
+        if (radial > 74.0) {
             return RoadType.NONE;
         }
-        double wx = localX + warpX(localX, localZ);
-        double wz = localZ + warpZ(localX, localZ);
 
-        boolean onRoad = isOnVillageRoad(cityIndex, wx, wz);
+        boolean onRoad = isOnVillageRoad(cityIndex, localX, localZ);
         if (!onRoad) {
             return RoadType.NONE;
         }

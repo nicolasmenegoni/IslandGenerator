@@ -50,6 +50,7 @@ public class HouseGenerator {
             }
             int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
             int farmLotIndex = Math.floorMod(villageIndex * 3 + 1, plots.length);
+            stabilizeVillageRoads(region, cx, cz, startX, endX, startZ, endZ);
             populateVillageLights(region, cx, cz, startX, endX, startZ, endZ, woodPalette(villageIndex));
             populateGuardTower(region, cx, cz, startX, endX, startZ, endZ, woodPalette(villageIndex), villageIndex);
             WoodPalette palette = woodPalette(villageIndex);
@@ -129,6 +130,22 @@ public class HouseGenerator {
                 prepareLotSurface(region, prepMinX, prepMinZ, prepW, prepL, lotInfo.minY(), 20);
                 buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette, entryFacing, secondFloor, hasGarden, hasChimney);
                 occupiedLots.add(new int[]{occMinX, occMinZ, occMaxX, occMaxZ});
+            }
+        }
+    }
+
+    private void stabilizeVillageRoads(LimitedRegion region, int cx, int cz, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ) {
+        for (int x = chunkMinX; x <= chunkMaxX; x++) {
+            for (int z = chunkMinZ; z <= chunkMaxZ; z++) {
+                CityGenerator.RoadType type = cityGenerator.getRoadType(x, z);
+                if (type == CityGenerator.RoadType.NONE) {
+                    continue;
+                }
+                int y = region.getHighestBlockYAt(x, z);
+                if (region.getType(x, y - 1, z).isAir()) {
+                    region.setType(x, y - 1, z, Material.DIRT);
+                }
+                region.setType(x, y, z, type == CityGenerator.RoadType.SAND ? Material.SAND : Material.DIRT_PATH);
             }
         }
     }
@@ -1066,24 +1083,44 @@ public class HouseGenerator {
         }
         int y = region.getHighestBlockYAt(baseX, baseZ);
         Material wall = palette.wall();
-        for (int yy = y; yy <= y + 6; yy++) {
-            region.setType(baseX, yy, baseZ, wall);
+        // base 4 pés
+        int[][] legs = {{-2, -2}, {2, -2}, {-2, 2}, {2, 2}};
+        for (int[] leg : legs) {
+            for (int yy = y; yy <= y + 8; yy++) {
+                region.setType(baseX + leg[0], yy, baseZ + leg[1], wall);
+            }
         }
-        for (int yy = y + 1; yy <= y + 5; yy++) {
-            Ladder ladder = (Ladder) Bukkit.createBlockData(Material.LADDER);
-            ladder.setFacing(BlockFace.SOUTH);
-            region.setBlockData(baseX + 1, yy, baseZ, ladder);
+        // plataforma superior maior que base
+        for (int xx = baseX - 3; xx <= baseX + 3; xx++) {
+            for (int zz = baseZ - 3; zz <= baseZ + 3; zz++) {
+                region.setType(xx, y + 8, zz, wall);
+            }
         }
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int yy = y + 7; yy <= y + 9; yy++) {
-                    boolean edge = Math.abs(dx) == 1 || Math.abs(dz) == 1;
-                    region.setType(baseX + dx, yy, baseZ + dz, edge ? wall : Material.AIR);
+        for (int xx = baseX - 3; xx <= baseX + 3; xx++) {
+            for (int zz = baseZ - 3; zz <= baseZ + 3; zz++) {
+                boolean edge = xx == baseX - 3 || xx == baseX + 3 || zz == baseZ - 3 || zz == baseZ + 3;
+                for (int yy = y + 9; yy <= y + 12; yy++) {
+                    region.setType(xx, yy, zz, edge ? wall : Material.AIR);
                 }
             }
         }
-        region.setType(baseX, y + 7, baseZ, Material.CHEST);
-        region.setType(baseX, y + 8, baseZ + 1, Material.RED_BED);
+        // janelas
+        region.setType(baseX - 3, y + 10, baseZ, Material.GLASS_PANE);
+        region.setType(baseX + 3, y + 10, baseZ, Material.GLASS_PANE);
+        region.setType(baseX, y + 10, baseZ - 3, Material.GLASS_PANE);
+        region.setType(baseX, y + 10, baseZ + 3, Material.GLASS_PANE);
+
+        // escada de mão central, limpa o meio
+        for (int yy = y + 1; yy <= y + 11; yy++) {
+            region.setType(baseX, yy, baseZ, Material.AIR);
+        }
+        for (int yy = y + 1; yy <= y + 8; yy++) {
+            Ladder ladder = (Ladder) Bukkit.createBlockData(Material.LADDER);
+            ladder.setFacing(BlockFace.SOUTH);
+            region.setBlockData(baseX, yy, baseZ + 1, ladder);
+        }
+        region.setType(baseX - 1, y + 9, baseZ - 1, Material.CHEST);
+        region.setType(baseX + 1, y + 9, baseZ + 1, Material.RED_BED);
     }
 
     private void populateVillageTrees(LimitedRegion region, WoodPalette palette, int centerX, int centerZ, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ) {
@@ -1107,10 +1144,10 @@ public class HouseGenerator {
                 continue;
             }
             int y = region.getHighestBlockYAt(x, z);
-            if (region.getType(x, y - 1, z) != Material.GRASS_BLOCK || !region.getType(x, y, z).isAir()) {
+            if (region.getType(x, y, z) != Material.GRASS_BLOCK || !region.getType(x, y + 1, z).isAir()) {
                 continue;
             }
-            for (int yy = y + 1; yy <= y + 4; yy++) {
+            for (int yy = y + 1; yy <= y + 5; yy++) {
                 region.setType(x, yy, z, log);
             }
             for (int xx = x - 2; xx <= x + 2; xx++) {
