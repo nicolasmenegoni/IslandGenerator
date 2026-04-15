@@ -57,7 +57,7 @@ public class CityGenerator {
     }
 
     public int villagePattern(int index) {
-        return Math.floorMod(index, 3);
+        return Math.floorMod(index, 4);
     }
 
     public RoadType getRoadType(int x, int z) {
@@ -108,6 +108,18 @@ public class CityGenerator {
             boolean b1 = Math.abs(z + 18) <= 1.3 && x >= -30 && x <= 30;
             boolean b2 = Math.abs(z - 14) <= 1.3 && x >= -32 && x <= 32;
             return b1 || b2;
+        }
+        if (!main && pattern == 3) {
+            boolean outerNorth = Math.abs(z + 16) <= 1.4 && x >= -14 && x <= 14;
+            boolean outerSouth = Math.abs(z - 24) <= 1.4 && x >= -14 && x <= 14;
+            boolean outerWest = Math.abs(x + 14) <= 1.4 && z >= -16 && z <= 24;
+            boolean outerEast = Math.abs(x - 14) <= 1.4 && z >= -16 && z <= 24;
+            boolean westSpurTop = Math.abs(z + 2) <= 1.3 && x >= -26 && x <= -14;
+            boolean westSpurBottom = Math.abs(z - 14) <= 1.3 && x >= -26 && x <= -14;
+            boolean eastSpurTop = Math.abs(z + 2) <= 1.3 && x >= 14 && x <= 26;
+            boolean eastSpurBottom = Math.abs(z - 14) <= 1.3 && x >= 14 && x <= 26;
+            return outerNorth || outerSouth || outerWest || outerEast
+                    || westSpurTop || westSpurBottom || eastSpurTop || eastSpurBottom;
         }
         return main;
     }

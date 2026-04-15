@@ -18,6 +18,12 @@ import java.util.Random;
 
 public class HouseGenerator {
     private final CityGenerator cityGenerator;
+    private static final HouseStyle[] STYLE_ROTATION = {
+            HouseStyle.SINGLE_STORY,
+            HouseStyle.TWO_STORY,
+            HouseStyle.FENCED,
+            HouseStyle.CHIMNEY
+    };
 
     public HouseGenerator(CityGenerator cityGenerator) {
         this.cityGenerator = cityGenerator;
@@ -40,6 +46,9 @@ public class HouseGenerator {
                 continue;
             }
             int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
+            if (cityGenerator.villagePattern(villageIndex) == 3) {
+                populateCentralFarm(region, cx, cz);
+            }
             WoodPalette palette = woodPalette(villageIndex);
             for (int plotIndex = 0; plotIndex < plots.length; plotIndex++) {
                 int[] plot = plots[plotIndex];
@@ -48,7 +57,7 @@ public class HouseGenerator {
                 if (centerX < startX || centerX > endX || centerZ < startZ || centerZ > endZ) {
                     continue;
                 }
-                boolean mandatoryVillageHouse = plotIndex < 5;
+                boolean mandatoryVillageHouse = plotIndex < 4;
                 if ((!mandatoryVillageHouse && !isCenteredLotCandidate(centerX, centerZ)) || isMountainVillage(centerX, centerZ)) {
                     continue;
                 }
@@ -73,8 +82,10 @@ public class HouseGenerator {
                 centerX = lotCenter[0];
                 centerZ = lotCenter[1];
 
-                boolean secondFloor = random.nextDouble() < 0.40;
-                boolean hasGarden = random.nextDouble() < 0.42;
+                HouseStyle style = houseStyleForPlot(villageIndex, plotIndex);
+                boolean secondFloor = style == HouseStyle.TWO_STORY || (style == HouseStyle.CHIMNEY && random.nextDouble() < 0.35);
+                boolean hasGarden = style == HouseStyle.FENCED || (style == HouseStyle.SINGLE_STORY && random.nextDouble() < 0.28);
+                boolean hasChimney = style == HouseStyle.CHIMNEY;
 
                 int houseW = secondFloor ? 14 + random.nextInt(4) : 12 + random.nextInt(4);
                 int houseL = secondFloor ? 14 + random.nextInt(4) : 12 + random.nextInt(4);
@@ -97,7 +108,7 @@ public class HouseGenerator {
                 int prepW = houseW + (enclosureOffset * 2) + 2;
                 int prepL = houseL + (enclosureOffset * 2) + 2;
                 prepareLotSurface(region, prepMinX, prepMinZ, prepW, prepL, lotInfo.minY(), 20);
-                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette, entryFacing, secondFloor, hasGarden);
+                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette, entryFacing, secondFloor, hasGarden, hasChimney);
                 occupiedLots.add(new int[]{occMinX, occMinZ, occMaxX, occMaxZ});
             }
         }
@@ -111,10 +122,19 @@ public class HouseGenerator {
             case 1 -> new int[][]{
                     {-22, -30}, {0, -30}, {22, -30}, {-22, -8}, {22, -8}, {-22, 14}, {22, 14}, {-10, 34}, {10, 34}
             };
-            default -> new int[][]{
+            case 2 -> new int[][]{
                     {-24, -28}, {0, -28}, {24, -28}, {-20, -4}, {20, -4}, {-20, 20}, {20, 20}, {-8, 38}, {8, 38}
             };
+            default -> new int[][]{
+                    {-10, -28}, {10, -28}, {-28, -2}, {-28, 16}, {28, -2}, {28, 16}, {0, 38}
+            };
         };
+    }
+
+    private HouseStyle houseStyleForPlot(int villageIndex, int plotIndex) {
+        int base = Math.floorMod(villageIndex, STYLE_ROTATION.length);
+        int styleIndex = (base + (plotIndex / 2)) % STYLE_ROTATION.length;
+        return STYLE_ROTATION[styleIndex];
     }
 
     private boolean intersectsOccupiedLot(List<int[]> occupiedLots, int minX, int minZ, int maxX, int maxZ) {
@@ -143,12 +163,12 @@ public class HouseGenerator {
     }
 
     private int[] offsetLotFromRoad(int x, int z, BlockFace entryFacing, Random random) {
-        int targetDistance = 6 + random.nextInt(3); // 6-8 blocos
+        int targetDistance = 4 + random.nextInt(3); // 4-6 blocos
         int currentDistance = distanceToRoad(x, z, entryFacing.getModX(), entryFacing.getModZ(), 32);
         if (currentDistance > 32) {
             return new int[]{x, z};
         }
-        int shift = Math.max(-3, Math.min(3, targetDistance - currentDistance));
+        int shift = Math.max(-4, Math.min(4, targetDistance - currentDistance));
         int newX = x - (entryFacing.getModX() * shift);
         int newZ = z - (entryFacing.getModZ() * shift);
         return new int[]{newX, newZ};
@@ -195,7 +215,7 @@ public class HouseGenerator {
         }
     }
 
-    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette, BlockFace entryFacing, boolean secondFloor, boolean hasGarden) {
+    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette, BlockFace entryFacing, boolean secondFloor, boolean hasGarden, boolean hasChimney) {
         Material wall = palette.wall();
         Material roofStair = palette.roofStair();
         Material floor = palette.floor();
@@ -228,7 +248,7 @@ public class HouseGenerator {
             buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, doorMaterial, false);
             decorateInterior(region, random, x + 1, secondY, z + 1, w - 2, l - 2, false, false);
             buildTriangularRoof(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, roofStair, wall);
-            if (random.nextDouble() < 0.45) {
+            if (hasChimney || random.nextDouble() < 0.22) {
                 buildChimney(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2);
             }
             if (random.nextDouble() < 0.35) {
@@ -238,7 +258,7 @@ public class HouseGenerator {
             }
         } else {
             buildTriangularRoof(region, x, y + floorHeight, z, w, l, roofStair, wall);
-            if (random.nextDouble() < 0.30) {
+            if (hasChimney || random.nextDouble() < 0.18) {
                 buildChimney(region, x, y + floorHeight, z, w, l);
             }
         }
@@ -790,16 +810,42 @@ public class HouseGenerator {
                 if (!edge) {
                     continue;
                 }
-                region.setType(xx, y, zz, Material.DIRT);
-                region.setType(xx, y + 1, zz, Material.OAK_FENCE);
+                region.setType(xx, y, zz, Material.OAK_FENCE);
             }
         }
         int gateX = x + (w / 2);
         Directional gate = (Directional) Bukkit.createBlockData(Material.OAK_FENCE_GATE);
         gate.setFacing(BlockFace.NORTH);
-        region.setBlockData(gateX, y + 1, minZ, gate);
+        region.setBlockData(gateX, y, minZ, gate);
         for (int pathZ = minZ + 1; pathZ <= z - 1; pathZ++) {
-            region.setType(gateX, y + 1, pathZ, Material.AIR);
+            region.setType(gateX, y, pathZ, Material.AIR);
+        }
+    }
+
+    private void populateCentralFarm(LimitedRegion region, int centerX, int centerZ) {
+        int minX = centerX - 6;
+        int maxX = centerX + 6;
+        int minZ = centerZ - 10;
+        int maxZ = centerZ + 18;
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                int y = region.getHighestBlockYAt(x, z);
+                boolean waterLane = Math.floorMod(z - centerZ, 5) == 0 && x >= centerX - 1 && x <= centerX + 1;
+                boolean edge = x == minX || x == maxX || z == minZ || z == maxZ;
+                if (edge) {
+                    region.setType(x, y, z, Material.OAK_FENCE);
+                    continue;
+                }
+                if (waterLane) {
+                    region.setType(x, y, z, Material.WATER);
+                    continue;
+                }
+                region.setType(x, y, z, Material.FARMLAND);
+                Material crop = (Math.floorMod(x + z, 3) == 0) ? Material.WHEAT : Material.CARROTS;
+                if (region.getType(x, y + 1, z).isAir()) {
+                    region.setType(x, y + 1, z, crop);
+                }
+            }
         }
     }
 
@@ -852,5 +898,12 @@ public class HouseGenerator {
         int dx = x - 300;
         int dz = z - 250;
         return (dx * dx) + (dz * dz) <= 220 * 220;
+    }
+
+    private enum HouseStyle {
+        SINGLE_STORY,
+        TWO_STORY,
+        FENCED,
+        CHIMNEY
     }
 }
