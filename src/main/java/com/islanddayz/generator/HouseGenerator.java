@@ -66,8 +66,8 @@ public class HouseGenerator {
                 if (centerX < startX || centerX > endX || centerZ < startZ || centerZ > endZ) {
                     continue;
                 }
-                boolean mandatoryVillageHouse = plotIndex < 5;
-                if ((!mandatoryVillageHouse && !isCenteredLotCandidate(centerX, centerZ)) || isMountainVillage(centerX, centerZ)) {
+                boolean mandatoryVillageHouse = true;
+                if (isMountainVillage(centerX, centerZ)) {
                     continue;
                 }
 
@@ -76,10 +76,10 @@ public class HouseGenerator {
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
                 LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
-                if (!mandatoryVillageHouse && intersectsOccupiedLot(occupiedLots, minX, minZ, minX + lotW - 1, minZ + lotL - 1)) {
+                if (intersectsOccupiedLot(occupiedLots, minX, minZ, minX + lotW - 1, minZ + lotL - 1)) {
                     continue;
                 }
-                if ((!mandatoryVillageHouse && !lotInfo.buildable()) || (!mandatoryVillageHouse && (lotInfo.maxY() - lotInfo.minY()) > 8)) {
+                if (!lotInfo.buildable() || (lotInfo.maxY() - lotInfo.minY()) > 10) {
                     continue;
                 }
 
@@ -116,11 +116,11 @@ public class HouseGenerator {
                 if (houseOverlapsRoad(houseX, houseZ, houseW, houseL)) {
                     continue;
                 }
-                if (!mandatoryVillageHouse && intersectsOccupiedLot(occupiedLots, occMinX, occMinZ, occMaxX, occMaxZ)) {
+                if (intersectsOccupiedLot(occupiedLots, occMinX, occMinZ, occMaxX, occMaxZ)) {
                     continue;
                 }
                 int minRoadDistance = mandatoryVillageHouse ? 1 : 2;
-                if (!mandatoryVillageHouse && houseTooCloseToRoad(houseX, houseZ, houseW, houseL, minRoadDistance)) {
+                if (houseTooCloseToRoad(houseX, houseZ, houseW, houseL, minRoadDistance)) {
                     continue;
                 }
                 int prepMinX = houseX - enclosureOffset - 1;
@@ -165,11 +165,10 @@ public class HouseGenerator {
 
     private int[][] villagePlots(int pattern) {
         return new int[][]{
-                {-16, -30}, {16, -30},
-                {-30, -10}, {-12, -10}, {30, -10},
-                {16, 8},
-                {-12, 16}, {16, 16},
-                {-12, 34}, {16, 34}
+                {-14, -30}, {14, -30},
+                {-26, -12}, {-8, -12}, {10, -8}, {28, -8},
+                {-10, 14}, {16, 12},
+                {-10, 34}, {16, 34}
         };
     }
 
@@ -1134,7 +1133,7 @@ public class HouseGenerator {
         }
 
         // escada de mão central, limpa o meio
-        for (int yy = y + 1; yy <= y + 11; yy++) {
+        for (int yy = y; yy <= y + 11; yy++) {
             region.setType(baseX, yy, baseZ, Material.AIR);
             region.setType(baseX, yy, baseZ + 2, wall); // bloco atrás da escada
         }

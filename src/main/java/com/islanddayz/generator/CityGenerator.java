@@ -95,10 +95,10 @@ public class CityGenerator {
         boolean crossHorizontal = Math.abs(z) <= half && x >= -42 && x <= 42;
         boolean crossVertical = Math.abs(x) <= half && z >= -42 && z <= 42;
         boolean leftUpper = Math.abs(z + 14) <= half && x >= -30 && x <= 0;
-        boolean rightUpper = Math.abs(z + 8) <= half && x >= 0 && x <= 26;
-        boolean rightMiddle = Math.abs(z - 8) <= half && x >= 0 && x <= 26;
-        boolean rightLower = Math.abs(z - 20) <= half && x >= 0 && x <= 24;
-        boolean leftLower = Math.abs(z - 32) <= half && x >= -22 && x <= 0;
+        boolean rightUpper = Math.abs(z + 8) <= half && x >= 0 && x <= 28;
+        boolean rightMiddle = Math.abs(z - 8) <= half && x >= 0 && x <= 28;
+        boolean rightLower = Math.abs(z - 22) <= half && x >= 0 && x <= 24;
+        boolean leftLower = Math.abs(z - 34) <= half && x >= -24 && x <= 0;
         return crossHorizontal || crossVertical || leftUpper || rightUpper || rightMiddle || rightLower || leftLower;
     }
 
