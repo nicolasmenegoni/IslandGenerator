@@ -48,20 +48,20 @@ public class HouseGenerator {
                 if (centerX < startX || centerX > endX || centerZ < startZ || centerZ > endZ) {
                     continue;
                 }
-                boolean mandatoryVillageHouse = plotIndex < 3;
+                boolean mandatoryVillageHouse = plotIndex < 5;
                 if ((!mandatoryVillageHouse && !isCenteredLotCandidate(centerX, centerZ)) || isMountainVillage(centerX, centerZ)) {
                     continue;
                 }
 
-                int lotW = 14;
-                int lotL = 14;
+                int lotW = 18;
+                int lotL = 18;
                 int minX = centerX - lotW / 2;
                 int minZ = centerZ - lotL / 2;
                 LotInfo lotInfo = analyzeLot(region, minX, minZ, lotW, lotL, centerX, centerZ);
-                if (intersectsOccupiedLot(occupiedLots, minX, minZ, lotW, lotL)) {
+                if (intersectsOccupiedLot(occupiedLots, minX, minZ, minX + lotW - 1, minZ + lotL - 1)) {
                     continue;
                 }
-                if (!lotInfo.buildable()) {
+                if ((!mandatoryVillageHouse && !lotInfo.buildable()) || (lotInfo.maxY() - lotInfo.minY()) > 8) {
                     continue;
                 }
 
@@ -73,16 +73,32 @@ public class HouseGenerator {
                 centerX = lotCenter[0];
                 centerZ = lotCenter[1];
 
-                int houseW = 11 + random.nextInt(4);
-                int houseL = 11 + random.nextInt(4);
+                boolean secondFloor = random.nextDouble() < 0.40;
+                boolean hasGarden = random.nextDouble() < 0.42;
+
+                int houseW = secondFloor ? 14 + random.nextInt(4) : 12 + random.nextInt(4);
+                int houseL = secondFloor ? 14 + random.nextInt(4) : 12 + random.nextInt(4);
                 int houseX = centerX - (houseW / 2);
                 int houseZ = centerZ - (houseL / 2);
-                if (houseTouchesRoad(houseX, houseZ, houseW, houseL)) {
+                int enclosureOffset = hasGarden ? 4 : 0;
+                int houseSpacing = 5 + random.nextInt(2);
+                int occMinX = houseX - enclosureOffset - houseSpacing;
+                int occMinZ = houseZ - enclosureOffset - houseSpacing;
+                int occMaxX = houseX + houseW - 1 + enclosureOffset + houseSpacing;
+                int occMaxZ = houseZ + houseL - 1 + enclosureOffset + houseSpacing;
+                if (intersectsOccupiedLot(occupiedLots, occMinX, occMinZ, occMaxX, occMaxZ)) {
                     continue;
                 }
-                prepareLotSurface(region, minX, minZ, lotW, lotL, lotInfo.minY(), 20);
-                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette, entryFacing);
-                occupiedLots.add(new int[]{minX, minZ, minX + lotW - 1, minZ + lotL - 1});
+                if (houseTooCloseToRoad(houseX, houseZ, houseW, houseL, hasGarden ? 3 : 2)) {
+                    continue;
+                }
+                int prepMinX = houseX - enclosureOffset - 1;
+                int prepMinZ = houseZ - enclosureOffset - 1;
+                int prepW = houseW + (enclosureOffset * 2) + 2;
+                int prepL = houseL + (enclosureOffset * 2) + 2;
+                prepareLotSurface(region, prepMinX, prepMinZ, prepW, prepL, lotInfo.minY(), 20);
+                buildHouse(region, random, houseX, lotInfo.minY(), houseZ, houseW, houseL, palette, entryFacing, secondFloor, hasGarden);
+                occupiedLots.add(new int[]{occMinX, occMinZ, occMaxX, occMaxZ});
             }
         }
     }
@@ -90,20 +106,18 @@ public class HouseGenerator {
     private int[][] villagePlots(int pattern) {
         return switch (pattern) {
             case 0 -> new int[][]{
-                    {6, -26}, {8, -14}, {-8, -10}, {6, 2}, {-14, 12}, {16, 26}
+                    {-20, -34}, {0, -34}, {20, -34}, {-18, -12}, {18, -12}, {-18, 12}, {18, 12}, {-18, 34}, {18, 34}
             };
             case 1 -> new int[][]{
-                    {-8, -22}, {8, -24}, {-8, -10}, {8, -8}, {-8, 2}, {10, 14}
+                    {-22, -30}, {0, -30}, {22, -30}, {-22, -8}, {22, -8}, {-22, 14}, {22, 14}, {-10, 34}, {10, 34}
             };
             default -> new int[][]{
-                    {-10, -18}, {10, -18}, {-8, -4}, {8, -2}, {-12, 14}, {10, 14}
+                    {-24, -28}, {0, -28}, {24, -28}, {-20, -4}, {20, -4}, {-20, 20}, {20, 20}, {-8, 38}, {8, 38}
             };
         };
     }
 
-    private boolean intersectsOccupiedLot(List<int[]> occupiedLots, int minX, int minZ, int w, int l) {
-        int maxX = minX + w - 1;
-        int maxZ = minZ + l - 1;
+    private boolean intersectsOccupiedLot(List<int[]> occupiedLots, int minX, int minZ, int maxX, int maxZ) {
         for (int[] box : occupiedLots) {
             if (maxX < box[0] || minX > box[2] || maxZ < box[1] || minZ > box[3]) {
                 continue;
@@ -181,7 +195,7 @@ public class HouseGenerator {
         }
     }
 
-    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette, BlockFace entryFacing) {
+    private void buildHouse(LimitedRegion region, Random random, int x, int y, int z, int w, int l, WoodPalette palette, BlockFace entryFacing, boolean secondFloor, boolean hasGarden) {
         Material wall = palette.wall();
         Material roofStair = palette.roofStair();
         Material floor = palette.floor();
@@ -190,7 +204,6 @@ public class HouseGenerator {
         Material doorMaterial = palette.door();
 
         int floorHeight = 5 + random.nextInt(2);
-        boolean secondFloor = random.nextDouble() < 0.35;
 
         clearConstructionVolume(region, x, y, z, w, l, secondFloor ? (floorHeight * 2) + 8 : floorHeight + 8);
         buildAdaptiveFloor(region, x, y, z, w, l, floor, true);
@@ -202,8 +215,8 @@ public class HouseGenerator {
         placeDoor(region, x, y, z, w, l, doorMaterial, doubleDoor, entryFacing);
         ensureFrontDoorStep(region, x, y, z, w, l, doubleDoor, entryFacing);
         buildInteriorRooms(region, x, y, z, w, l, floorHeight, wall, doorMaterial, doubleDoor);
-        decorateInterior(region, random, x, y, z, w, l);
-        if (random.nextDouble() < 0.28) {
+        decorateInterior(region, random, x, y, z, w, l, true, true);
+        if (hasGarden) {
             buildGarden(region, random, x, y, z, w, l);
         }
 
@@ -213,8 +226,11 @@ public class HouseGenerator {
             buildOuterWalls(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall);
             carveWindows(region, random, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, window);
             buildInteriorRooms(region, x + 1, secondY, z + 1, w - 2, l - 2, floorHeight - 1, wall, doorMaterial, false);
-            decorateInterior(region, random, x + 1, secondY, z + 1, w - 2, l - 2);
+            decorateInterior(region, random, x + 1, secondY, z + 1, w - 2, l - 2, false, false);
             buildTriangularRoof(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2, roofStair, wall);
+            if (random.nextDouble() < 0.45) {
+                buildChimney(region, x + 1, secondY + floorHeight - 1, z + 1, w - 2, l - 2);
+            }
             if (random.nextDouble() < 0.35) {
                 buildLadderBetweenFloors(region, x + 2, y + 1, z + 2, floorHeight);
             } else {
@@ -222,7 +238,20 @@ public class HouseGenerator {
             }
         } else {
             buildTriangularRoof(region, x, y + floorHeight, z, w, l, roofStair, wall);
+            if (random.nextDouble() < 0.30) {
+                buildChimney(region, x, y + floorHeight, z, w, l);
+            }
         }
+    }
+
+    private void buildChimney(LimitedRegion region, int x, int roofBaseY, int z, int w, int l) {
+        int chimneyX = x + 2;
+        int chimneyZ = z + 2;
+        int topY = roofBaseY + 5;
+        for (int yy = roofBaseY; yy <= topY; yy++) {
+            region.setType(chimneyX, yy, chimneyZ, Material.BRICKS);
+        }
+        region.setType(chimneyX, topY + 1, chimneyZ, Material.CAMPFIRE);
     }
 
     private void clearConstructionVolume(LimitedRegion region, int x, int y, int z, int w, int l, int minClearance) {
@@ -506,13 +535,15 @@ public class HouseGenerator {
         }
     }
 
-    private void decorateInterior(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
+    private void decorateInterior(LimitedRegion region, Random random, int x, int y, int z, int w, int l, boolean includeKitchen, boolean allowWallTorch) {
         Material[] carpets = {Material.RED_CARPET, Material.GREEN_CARPET, Material.CYAN_CARPET, Material.GRAY_CARPET};
         Material carpetColor = carpets[random.nextInt(carpets.length)];
         int roomY = y + 1;
 
         placeCornerWorkTable(region, random, x, roomY, z, w, l);
-        placeKitchen(region, x, roomY, z, w, l);
+        if (includeKitchen) {
+            placeKitchen(region, x, roomY, z, w, l);
+        }
         placeBedroomBeds(region, random, x, roomY, z, w, l);
         placeBookshelves(region, random, x, roomY, z, w, l);
         placeStorageVariation(region, random, x, roomY, z, w, l);
@@ -524,9 +555,17 @@ public class HouseGenerator {
             Lantern lantern = (Lantern) Bukkit.createBlockData(Material.LANTERN);
             lantern.setHanging(true);
             region.setBlockData(x + w / 2, ceilingY - 1, z + l / 2, lantern);
+        } else {
+            Lantern lantern = (Lantern) Bukkit.createBlockData(Material.LANTERN);
+            lantern.setHanging(true);
+            region.setBlockData(x + w / 2, y + 4, z + l / 2, lantern);
         }
-        if (random.nextBoolean()) {
-            region.setType(x + 1, y + 3, z + l / 2, Material.WALL_TORCH);
+        if (allowWallTorch && random.nextBoolean()) {
+            if (!region.getType(x + 1, y + 3, z + l / 2 - 1).isAir()) {
+                setFacingBlock(region, x + 1, y + 3, z + l / 2, Material.WALL_TORCH, BlockFace.SOUTH);
+            } else if (!region.getType(x + 1, y + 3, z + l / 2 + 1).isAir()) {
+                setFacingBlock(region, x + 1, y + 3, z + l / 2, Material.WALL_TORCH, BlockFace.NORTH);
+            }
         }
     }
 
@@ -740,24 +779,28 @@ public class HouseGenerator {
     }
 
     private void buildGarden(LimitedRegion region, Random random, int x, int y, int z, int w, int l) {
-        int minX = x - 2;
-        int maxX = x + w + 1;
-        int minZ = z - 2;
-        int maxZ = z + l + 1;
+        int fenceOffset = 4;
+        int minX = x - fenceOffset;
+        int maxX = x + w - 1 + fenceOffset;
+        int minZ = z - fenceOffset;
+        int maxZ = z + l - 1 + fenceOffset;
         for (int xx = minX; xx <= maxX; xx++) {
             for (int zz = minZ; zz <= maxZ; zz++) {
                 boolean edge = xx == minX || xx == maxX || zz == minZ || zz == maxZ;
                 if (!edge) {
                     continue;
                 }
+                region.setType(xx, y, zz, Material.DIRT);
                 region.setType(xx, y + 1, zz, Material.OAK_FENCE);
             }
         }
         int gateX = x + (w / 2);
         Directional gate = (Directional) Bukkit.createBlockData(Material.OAK_FENCE_GATE);
         gate.setFacing(BlockFace.NORTH);
-        region.setBlockData(gateX, y + 1, z - 2, gate);
-        region.setType(gateX, y + 1, z - 1, Material.AIR);
+        region.setBlockData(gateX, y + 1, minZ, gate);
+        for (int pathZ = minZ + 1; pathZ <= z - 1; pathZ++) {
+            region.setType(gateX, y + 1, pathZ, Material.AIR);
+        }
     }
 
     private record LotInfo(boolean buildable, int minY, int maxY) {
@@ -790,9 +833,13 @@ public class HouseGenerator {
         return BlockFace.EAST;
     }
 
-    private boolean houseTouchesRoad(int x, int z, int w, int l) {
-        for (int xx = x; xx < x + w; xx++) {
-            for (int zz = z; zz < z + l; zz++) {
+    private boolean houseTooCloseToRoad(int x, int z, int w, int l, int minDistance) {
+        int minX = x - minDistance;
+        int maxX = x + w - 1 + minDistance;
+        int minZ = z - minDistance;
+        int maxZ = z + l - 1 + minDistance;
+        for (int xx = minX; xx <= maxX; xx++) {
+            for (int zz = minZ; zz <= maxZ; zz++) {
                 if (cityGenerator.getRoadType(xx, zz) != CityGenerator.RoadType.NONE) {
                     return true;
                 }
