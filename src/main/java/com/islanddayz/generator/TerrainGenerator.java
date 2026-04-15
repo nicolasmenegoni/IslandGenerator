@@ -22,14 +22,11 @@ public class TerrainGenerator {
             natural = Math.min(natural, coastalCap);
         }
 
-        double urbanVariation = hillsNoise.noise((x + 300) * 0.012, (z - 300) * 0.012) * 1.2;
-        double urban = seaLevel + 4 + urbanVariation;
-
         double blend = Math.max(0.0, Math.min(1.0, cityInfluence));
-        double result = natural * (1.0 - blend) + urban * blend;
-        if (cityInfluence > 0.2) {
-            result = urban;
-        }
+        double urbanVariation = hillsNoise.noise((x + 300) * 0.012, (z - 300) * 0.012) * 1.2 * (1.0 - blend);
+        double urban = seaLevel + 4 + urbanVariation;
+        double smoothBlend = blend * blend * (3 - 2 * blend);
+        double result = natural * (1.0 - smoothBlend) + urban * smoothBlend;
 
         result += giantMountainBoost(x, z, islandMask, seaLevel);
         return Math.max(seaLevel + 1, (int) Math.round(result));
