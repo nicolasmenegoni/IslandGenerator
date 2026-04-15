@@ -47,7 +47,7 @@ public class HouseGenerator {
             }
             int[][] plots = villagePlots(cityGenerator.villagePattern(villageIndex));
             if (cityGenerator.villagePattern(villageIndex) == 3) {
-                populateCentralFarm(region, cx, cz);
+                populateCentralFarm(region, cx, cz, startX, endX, startZ, endZ);
             }
             WoodPalette palette = woodPalette(villageIndex);
             for (int plotIndex = 0; plotIndex < plots.length; plotIndex++) {
@@ -822,16 +822,24 @@ public class HouseGenerator {
         }
     }
 
-    private void populateCentralFarm(LimitedRegion region, int centerX, int centerZ) {
-        int minX = centerX - 6;
-        int maxX = centerX + 6;
-        int minZ = centerZ - 10;
-        int maxZ = centerZ + 18;
+    private void populateCentralFarm(LimitedRegion region, int centerX, int centerZ, int chunkMinX, int chunkMaxX, int chunkMinZ, int chunkMaxZ) {
+        int farmMinX = centerX - 6;
+        int farmMaxX = centerX + 6;
+        int farmMinZ = centerZ - 10;
+        int farmMaxZ = centerZ + 18;
+        if (farmMaxX < chunkMinX || farmMinX > chunkMaxX || farmMaxZ < chunkMinZ || farmMinZ > chunkMaxZ) {
+            return;
+        }
+
+        int minX = Math.max(farmMinX, chunkMinX);
+        int maxX = Math.min(farmMaxX, chunkMaxX);
+        int minZ = Math.max(farmMinZ, chunkMinZ);
+        int maxZ = Math.min(farmMaxZ, chunkMaxZ);
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
                 int y = region.getHighestBlockYAt(x, z);
                 boolean waterLane = Math.floorMod(z - centerZ, 5) == 0 && x >= centerX - 1 && x <= centerX + 1;
-                boolean edge = x == minX || x == maxX || z == minZ || z == maxZ;
+                boolean edge = x == farmMinX || x == farmMaxX || z == farmMinZ || z == farmMaxZ;
                 if (edge) {
                     region.setType(x, y, z, Material.OAK_FENCE);
                     continue;
