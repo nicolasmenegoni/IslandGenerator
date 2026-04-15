@@ -105,7 +105,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return false;
         }
 
-        boolean coastalBand = islandMask < 0.58D || topY <= SEA_LEVEL + 18;
+        boolean coastalBand = isCoastalZone(worldX, worldZ, islandMask);
         if (!coastalBand) {
             return false;
         }
@@ -139,7 +139,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
             return Material.GRASS_BLOCK;
         }
 
-        if (topY <= SEA_LEVEL + 5 || islandMask < 0.35D) {
+        if (topY <= SEA_LEVEL + 5 && isCoastalZone(x, z, islandMask)) {
             return Material.SAND;
         }
 
@@ -179,6 +179,14 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
     }
 
+    private boolean isCoastalZone(int worldX, int worldZ, double islandMask) {
+        if (islandMask > 0.62) {
+            return false;
+        }
+        double distanceFromEdge = Math.abs(islandGenerator.distanceFromIslandEdge(worldX, worldZ));
+        return distanceFromEdge <= 58.0;
+    }
+
     private void carveMountainCaves(ChunkData data, int localX, int localZ, int worldX, int worldZ, int topY, double islandMask) {
         if (islandMask < 0.6) {
             return;
@@ -212,13 +220,15 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     private double centerFlattenInfluence(int x, int z) {
         double dist = Math.sqrt((double) x * x + (double) z * z);
-        if (dist > 260) {
+        if (dist > 290) {
             return 0.0;
         }
-        double irregular = centerFlattenNoise.noise(x * 0.012, z * 0.012) * 26.0;
-        double edge = 260 + irregular;
-        double blend = Math.max(0.0, Math.min(1.0, (edge - dist) / 120.0));
-        return blend * 0.5;
+        double irregular = centerFlattenNoise.noise(x * 0.009, z * 0.009) * 38.0;
+        double edge = 290 + irregular;
+        double blend = Math.max(0.0, Math.min(1.0, (edge - dist) / 145.0));
+        double smoothBlend = blend * blend * (3.0 - 2.0 * blend);
+        double plateau = Math.max(0.0, Math.min(1.0, (210.0 - dist) / 70.0));
+        return Math.max(smoothBlend, plateau);
     }
 
     @Override
