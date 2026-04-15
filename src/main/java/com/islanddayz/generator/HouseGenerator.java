@@ -141,7 +141,7 @@ public class HouseGenerator {
                 if (type == CityGenerator.RoadType.NONE) {
                     continue;
                 }
-                int y = region.getHighestBlockYAt(x, z);
+                int y = findGroundY(region, x, z);
                 if (region.getType(x, y - 1, z).isAir()) {
                     region.setType(x, y - 1, z, Material.DIRT);
                 }
@@ -150,13 +150,26 @@ public class HouseGenerator {
         }
     }
 
+    private int findGroundY(LimitedRegion region, int x, int z) {
+        int y = region.getHighestBlockYAt(x, z);
+        while (y > 5) {
+            Material mat = region.getType(x, y, z);
+            if (mat == Material.OAK_LEAVES || mat == Material.SPRUCE_LEAVES || mat == Material.BIRCH_LEAVES || mat == Material.JUNGLE_LEAVES || mat.isAir()) {
+                y--;
+                continue;
+            }
+            break;
+        }
+        return y;
+    }
+
     private int[][] villagePlots(int pattern) {
         return new int[][]{
-                {-24, -30}, {0, -30}, {24, -30},
-                {-30, -8}, {-8, -8}, {16, -8},
-                {28, 0},
-                {-26, 16}, {-4, 16}, {22, 18},
-                {-10, 34}, {16, 34}
+                {-16, -30}, {16, -30},
+                {-30, -10}, {-12, -10}, {30, -10},
+                {16, 8},
+                {-12, 16}, {16, 16},
+                {-12, 34}, {16, 34}
         };
     }
 
@@ -786,9 +799,12 @@ public class HouseGenerator {
                 {x + w - 3, z + l - 3}
         };
         int[] pos = null;
+        int start = random.nextInt(spots.length);
         for (int i = 0; i < spots.length; i++) {
-            int[] candidate = spots[(i + random.nextInt(spots.length)) % spots.length];
-            if (!region.getType(candidate[0], y, candidate[1]).isAir() || !region.getType(candidate[0], y + 1, candidate[1]).isAir()) {
+            int[] candidate = spots[(start + i) % spots.length];
+            if (!region.getType(candidate[0], y, candidate[1]).isAir()
+                    || !region.getType(candidate[0], y + 1, candidate[1]).isAir()
+                    || !region.getType(candidate[0], y + 2, candidate[1]).isAir()) {
                 continue;
             }
             pos = candidate;
@@ -1104,15 +1120,23 @@ public class HouseGenerator {
                 }
             }
         }
-        // janelas
-        region.setType(baseX - 3, y + 10, baseZ, Material.GLASS_PANE);
-        region.setType(baseX + 3, y + 10, baseZ, Material.GLASS_PANE);
-        region.setType(baseX, y + 10, baseZ - 3, Material.GLASS_PANE);
-        region.setType(baseX, y + 10, baseZ + 3, Material.GLASS_PANE);
+        // janelas abertas (sem vidro)
+        region.setType(baseX - 3, y + 10, baseZ, Material.AIR);
+        region.setType(baseX + 3, y + 10, baseZ, Material.AIR);
+        region.setType(baseX, y + 10, baseZ - 3, Material.AIR);
+        region.setType(baseX, y + 10, baseZ + 3, Material.AIR);
+
+        // telhado
+        for (int xx = baseX - 4; xx <= baseX + 4; xx++) {
+            for (int zz = baseZ - 4; zz <= baseZ + 4; zz++) {
+                region.setType(xx, y + 13, zz, wall);
+            }
+        }
 
         // escada de mão central, limpa o meio
         for (int yy = y + 1; yy <= y + 11; yy++) {
             region.setType(baseX, yy, baseZ, Material.AIR);
+            region.setType(baseX, yy, baseZ + 2, wall); // bloco atrás da escada
         }
         for (int yy = y + 1; yy <= y + 8; yy++) {
             Ladder ladder = (Ladder) Bukkit.createBlockData(Material.LADDER);
