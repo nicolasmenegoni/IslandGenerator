@@ -3,7 +3,7 @@ package com.islanddayz.generator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class IslandGenerator {
-    private static final double ISLAND_RADIUS = 720.0;
+    private static final double ISLAND_RADIUS = 620.0;
     private final SimplexNoiseGenerator coastNoise = new SimplexNoiseGenerator(289341L);
 
     public double islandMask(int x, int z) {
