@@ -17,6 +17,7 @@ import org.bukkit.map.MapView;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.awt.Color;
+import java.util.ArrayList;
 
 public final class IslandDayzPlugin extends JavaPlugin {
     private static final int BORDER_SIZE = 512;
@@ -60,7 +61,7 @@ public final class IslandDayzPlugin extends JavaPlugin {
         mapView.setUnlimitedTracking(false);
         mapView.setLocked(true);
 
-        for (MapRenderer renderer : mapView.getRenderers()) {
+        for (MapRenderer renderer : new ArrayList<>(mapView.getRenderers())) {
             mapView.removeRenderer(renderer);
         }
         mapView.addRenderer(new IslandOverviewRenderer());
