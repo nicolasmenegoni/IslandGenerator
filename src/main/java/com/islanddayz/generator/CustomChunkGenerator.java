@@ -50,10 +50,10 @@ public class CustomChunkGenerator extends ChunkGenerator {
     }
 
     private int computeSimpleIslandHeight(int worldX, int worldZ, double islandMask) {
-        double coastalFlatten = smoothStep(0.08, 0.52, islandMask);
-        double interiorBoost = smoothStep(0.45, 0.95, islandMask);
+        double coastalFlatten = smoothStep(0.12, 0.72, islandMask);
+        double interiorBoost = smoothStep(0.52, 0.98, islandMask);
 
-        double base = SEA_LEVEL + 1 + (islandMask * 17.0);
+        double base = SEA_LEVEL + 1 + (islandMask * 14.0);
         double hills = hillsNoise.noise(worldX * 0.010, worldZ * 0.010) * 7.5;
         double detail = detailNoise.noise(worldX * 0.025, worldZ * 0.025) * 2.2;
         double rugged = Math.abs(ridgeNoise.noise(worldX * 0.018, worldZ * 0.018)) * 6.5;
@@ -61,14 +61,14 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
         double natural = base + ((hills + detail) * coastalFlatten) + ((rugged + longRidge) * interiorBoost);
 
-        if (islandMask < 0.55) {
-            double beachBlend = smoothStep(0.08, 0.55, islandMask);
-            double maxCoastHeight = SEA_LEVEL + 1 + (beachBlend * 7.0);
+        if (islandMask < 0.70) {
+            double beachBlend = smoothStep(0.10, 0.70, islandMask);
+            double maxCoastHeight = SEA_LEVEL + 1 + (beachBlend * 6.0);
             natural = Math.min(natural, maxCoastHeight);
         }
-        if (islandMask < 0.64) {
-            double transition = smoothStep(0.18, 0.64, islandMask);
-            double softCap = SEA_LEVEL + 1 + (transition * 6.0);
+        if (islandMask < 0.78) {
+            double transition = smoothStep(0.24, 0.78, islandMask);
+            double softCap = SEA_LEVEL + 1 + (transition * 9.0);
             natural = Math.min(natural, softCap);
         }
 
