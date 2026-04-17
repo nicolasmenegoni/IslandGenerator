@@ -25,8 +25,7 @@ public class WorldManager {
     }
 
     public void createOrLoadWorld() {
-        CityGenerator cityGenerator = new CityGenerator();
-        CustomChunkGenerator generator = new CustomChunkGenerator(islandGenerator, new TerrainGenerator(), cityGenerator, new TreeGenerator(islandGenerator, cityGenerator));
+        CustomChunkGenerator generator = new CustomChunkGenerator(islandGenerator);
 
         WorldCreator creator = new WorldCreator(WORLD_NAME)
                 .type(WorldType.NORMAL)
@@ -39,7 +38,7 @@ public class WorldManager {
 
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0, 0);
-        border.setSize(1536);
+        border.setSize(512);
 
         world.setStorm(false);
         world.setThundering(false);
@@ -48,19 +47,14 @@ public class WorldManager {
 
         Location spawn = findBeachSpawn();
         world.setSpawnLocation(spawn);
-
-        new ShipwreckGenerator().generateCornerShipwrecks(world);
-
-        plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border 1536x1536 aplicada.");
+        plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border 512x512 aplicada.");
     }
 
     public Location findBeachSpawn() {
         ensureWorld();
         for (int i = 0; i < 200; i++) {
-            double angle = random.nextDouble() * Math.PI * 2;
-            double radius = 520 + random.nextDouble() * 180;
-            int x = (int) Math.round(Math.cos(angle) * radius);
-            int z = (int) Math.round(Math.sin(angle) * radius);
+            int x = -220 + random.nextInt(441);
+            int z = -220 + random.nextInt(441);
 
             world.getChunkAt(x >> 4, z >> 4);
             int y = world.getHighestBlockYAt(x, z);
@@ -91,5 +85,10 @@ public class WorldManager {
         if (world == null) {
             throw new IllegalStateException("Mundo ainda não foi criado.");
         }
+    }
+
+    public World getWorld() {
+        ensureWorld();
+        return world;
     }
 }
