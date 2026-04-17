@@ -13,7 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapCanvas;
-import org.bukkit.map.MapPalette;
 import org.bukkit.map.MapRenderer;
 import org.bukkit.map.MapView;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -108,22 +107,22 @@ public final class IslandDayzPlugin extends JavaPlugin {
                         int worldX = ((px - 64) * BORDER_SIZE) / 128;
                         int worldZ = ((pz - 64) * BORDER_SIZE) / 128;
 
-                        byte color;
+                        Color color;
                         if (Math.abs(worldX) > half || Math.abs(worldZ) > half) {
-                            color = MapPalette.matchColor(new Color(45, 45, 45));
+                            color = new Color(45, 45, 45);
                         } else {
                             double mask = islandGenerator.islandMask(worldX, worldZ);
                             if (mask <= 0.02) {
-                                color = MapPalette.matchColor(new Color(40, 95, 190));
+                                color = new Color(40, 95, 190);
                             } else if (mask < 0.54) {
-                                color = MapPalette.matchColor(new Color(232, 220, 170));
+                                color = new Color(232, 220, 170);
                             } else if (mask < 0.72) {
-                                color = MapPalette.matchColor(new Color(92, 168, 86));
+                                color = new Color(92, 168, 86);
                             } else {
-                                color = MapPalette.matchColor(new Color(58, 124, 54));
+                                color = new Color(58, 124, 54);
                             }
                         }
-                        canvas.setPixel(px, pz, color);
+                        canvas.setPixelColor(px, pz, color);
                     }
                 }
                 rendered = true;
