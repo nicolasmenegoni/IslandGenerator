@@ -5,7 +5,6 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.World;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
-import org.bukkit.generator.LimitedRegion;
 import org.bukkit.generator.WorldInfo;
 
 import java.util.List;
