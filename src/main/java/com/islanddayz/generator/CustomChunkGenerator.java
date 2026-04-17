@@ -14,7 +14,7 @@ import java.util.Random;
 public class CustomChunkGenerator extends ChunkGenerator {
     private static final int SEA_LEVEL = 63;
     private static final int MAX_OCEAN_DEPTH = 33;
-    private static final int BORDER_HALF = 256;
+    private static final int BORDER_HALF = 1024;
 
     private final IslandGenerator islandGenerator;
     private final SimplexNoiseGenerator hillsNoise = new SimplexNoiseGenerator(918273L);

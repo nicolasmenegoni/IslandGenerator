@@ -3,6 +3,7 @@ package com.islanddayz.generator;
 import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 public class IslandGenerator {
+    private static final double WORLD_TO_ISLAND_SCALE = 0.27;
     private static final double[][] SPINE_POINTS = {
             {-170, 72},
             {-130, 60},
@@ -34,8 +35,10 @@ public class IslandGenerator {
     }
 
     private double signedCoastDistance(int x, int z) {
-        double rx = (x * 0.94) - (z * 0.12);
-        double rz = (x * 0.12) + (z * 0.94);
+        double sx = x * WORLD_TO_ISLAND_SCALE;
+        double sz = z * WORLD_TO_ISLAND_SCALE;
+        double rx = (sx * 0.94) - (sz * 0.12);
+        double rz = (sx * 0.12) + (sz * 0.94);
 
         SegmentDistance main = nearestDistanceToPath(rx, rz, SPINE_POINTS);
         SegmentDistance branch = nearestDistanceToPath(rx, rz, SIDE_BRANCH);

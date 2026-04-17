@@ -14,6 +14,7 @@ import java.util.Random;
 
 public class WorldManager {
     public static final String WORLD_NAME = "ilha_dayz";
+    private static final int WORLD_BORDER_SIZE = 2048;
 
     private final IslandDayzPlugin plugin;
     private final Random random = new Random();
@@ -38,7 +39,7 @@ public class WorldManager {
 
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0, 0);
-        border.setSize(512);
+        border.setSize(WORLD_BORDER_SIZE);
 
         world.setStorm(false);
         world.setThundering(false);
@@ -47,7 +48,7 @@ public class WorldManager {
 
         Location spawn = findBeachSpawn();
         world.setSpawnLocation(spawn);
-        plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border 512x512 aplicada.");
+        plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border " + WORLD_BORDER_SIZE + "x" + WORLD_BORDER_SIZE + " aplicada.");
     }
 
     public Location findBeachSpawn() {

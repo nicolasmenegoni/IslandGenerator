@@ -224,9 +224,9 @@ public class TreeGenerator {
                 region.setType(x, y, z, Material.TALL_GRASS);
             }
         } else if (roll < 0.70) {
-            region.setType(x, y, z, Material.AZALEA);
+            region.setType(x, y, z, Material.SHORT_GRASS);
         } else if (roll < 0.78) {
-            region.setType(x, y, z, Material.FLOWERING_AZALEA);
+            region.setType(x, y, z, Material.LARGE_FERN);
         } else {
             Material[] flowers = {
                     Material.DANDELION, Material.POPPY, Material.BLUE_ORCHID, Material.ALLIUM,

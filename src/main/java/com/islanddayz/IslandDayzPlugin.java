@@ -22,7 +22,7 @@ import java.awt.Color;
 import java.util.ArrayList;
 
 public final class IslandDayzPlugin extends JavaPlugin {
-    private static final int BORDER_SIZE = 512;
+    private static final int BORDER_SIZE = 2048;
     private WorldManager worldManager;
 
     @Override
@@ -53,14 +53,14 @@ public final class IslandDayzPlugin extends JavaPlugin {
     private void giveIslandMap(Player player) {
         ItemStack mapItem = createOverviewMap(worldManager.getWorld());
         player.getInventory().addItem(mapItem);
-        player.sendMessage("§eVocê recebeu um mapa da ilha (nível 2).");
+        player.sendMessage("§eVocê recebeu um mapa da ilha (nível 4).");
     }
 
     private ItemStack createOverviewMap(World world) {
         MapView mapView = Bukkit.createMap(world);
         mapView.setCenterX(0);
         mapView.setCenterZ(0);
-        mapView.setScale(MapView.Scale.NORMAL); // nível 2
+        mapView.setScale(MapView.Scale.FARTHEST); // nível 4
         mapView.setTrackingPosition(true);
         mapView.setUnlimitedTracking(true);
         mapView.setLocked(false);
