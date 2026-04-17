@@ -59,7 +59,7 @@ public class NaturalPopulator extends BlockPopulator {
 
     private boolean shouldPlaceTree(int x, int z, double mask) {
         int hash = Math.floorMod(x * 1847 + z * 2633 + x * z, 100);
-        int threshold = mask > 0.76 ? 35 : (mask > 0.62 ? 28 : 20);
+        int threshold = mask > 0.76 ? 45 : (mask > 0.62 ? 36 : 28);
         return hash < threshold;
     }
 
@@ -102,6 +102,7 @@ public class NaturalPopulator extends BlockPopulator {
         int canopyBase = y + trunkHeight - 3;
         buildIrregularCanopy(world, random, topX, canopyBase + 1, topZ, 3);
         buildLayeredCanopy(world, random, topX, canopyBase, topZ);
+        buildMirroredCanopy(world, random, topX, canopyBase, topZ);
 
         placeBranch(world, random, topX, y + trunkHeight - 4, topZ, BlockFace.NORTH);
         placeBranch(world, random, topX, y + trunkHeight - 5, topZ, BlockFace.SOUTH);
@@ -144,6 +145,19 @@ public class NaturalPopulator extends BlockPopulator {
         }
     }
 
+    private void buildMirroredCanopy(World world, Random random, int x, int y, int z) {
+        int ox = 1 + random.nextInt(2);
+        int oz = random.nextInt(2);
+        int oy = random.nextInt(2);
+        buildIrregularCanopy(world, random, x + ox, y + oy, z + oz, 2 + random.nextInt(2));
+        buildIrregularCanopy(world, random, x - ox, y + oy, z - oz, 2 + random.nextInt(2));
+
+        int sx = random.nextInt(2);
+        int sz = 1 + random.nextInt(2);
+        buildIrregularCanopy(world, random, x + sx, y + oy, z + sz, 2 + random.nextInt(2));
+        buildIrregularCanopy(world, random, x - sx, y + oy, z - sz, 2 + random.nextInt(2));
+    }
+
     private void placeBranch(World world, Random random, int x, int y, int z, BlockFace face) {
         int len = 2 + random.nextInt(3);
         for (int i = 1; i <= len; i++) {
@@ -161,12 +175,12 @@ public class NaturalPopulator extends BlockPopulator {
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 for (int dy = -2; dy <= 2; dy++) {
-                    double dist = Math.sqrt((dx * dx) + (dz * dz) + (dy * dy * 1.25));
-                    if (dist <= radius + (random.nextDouble() * 0.9)) {
+                    double dist = Math.sqrt((dx * dx * 0.9) + (dz * dz * 0.9) + (dy * dy * 1.45));
+                    if (dist <= radius + (random.nextDouble() * 0.8)) {
                         int x = cx + dx;
                         int y = cy + dy;
                         int z = cz + dz;
-                        if (world.getBlockAt(x, y, z).getType().isAir()) {
+                        if (world.getBlockAt(x, y, z).getType().isAir() && random.nextDouble() < 0.86) {
                             world.getBlockAt(x, y, z).setType(Material.OAK_LEAVES, false);
                         }
                     }
@@ -193,10 +207,10 @@ public class NaturalPopulator extends BlockPopulator {
                 if (base == Material.WATER || base == Material.SAND) {
                     continue;
                 }
-                if (random.nextDouble() < 0.18) {
+                if (random.nextDouble() < 0.15) {
                     placeGroundVegetation(world, random, px, py, pz, 0.85);
                 }
-                if (random.nextDouble() < 0.04) {
+                if (random.nextDouble() < 0.02) {
                     placeShrub(world, random, px, py, pz);
                 }
             }
@@ -208,11 +222,11 @@ public class NaturalPopulator extends BlockPopulator {
             return;
         }
         world.getBlockAt(x, y, z).setType(Material.OAK_LEAVES, false);
-        if (random.nextBoolean() && world.getBlockAt(x, y + 1, z).getType().isAir()) {
+        if (random.nextDouble() < 0.35 && world.getBlockAt(x, y + 1, z).getType().isAir()) {
             world.getBlockAt(x, y + 1, z).setType(Material.OAK_LEAVES, false);
         }
         for (BlockFace face : new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST}) {
-            if (random.nextDouble() < 0.75 && world.getBlockAt(x + face.getModX(), y, z + face.getModZ()).getType().isAir()) {
+            if (random.nextDouble() < 0.45 && world.getBlockAt(x + face.getModX(), y, z + face.getModZ()).getType().isAir()) {
                 world.getBlockAt(x + face.getModX(), y, z + face.getModZ()).setType(Material.OAK_LEAVES, false);
             }
         }
@@ -238,7 +252,7 @@ public class NaturalPopulator extends BlockPopulator {
 
     private void placeGroundVegetation(World world, Random random, int x, int y, int z, double mask) {
         double roll = random.nextDouble();
-        if (roll < 0.08) {
+        if (roll < 0.02) {
             Material[] flowers = {
                     Material.DANDELION, Material.POPPY, Material.BLUE_ORCHID, Material.ALLIUM,
                     Material.AZURE_BLUET, Material.OXEYE_DAISY, Material.CORNFLOWER, Material.LILY_OF_THE_VALLEY
@@ -246,18 +260,18 @@ public class NaturalPopulator extends BlockPopulator {
             world.getBlockAt(x, y, z).setType(flowers[random.nextInt(flowers.length)], false);
             return;
         }
-        if (roll < 0.18 && mask > 0.50) {
+        if (roll < 0.12 && mask > 0.50) {
             world.getBlockAt(x, y, z).setType(Material.MOSS_BLOCK, false);
             if (world.getBlockAt(x, y + 1, z).getType().isAir() && random.nextDouble() < 0.65) {
                 world.getBlockAt(x, y + 1, z).setType(Material.SHORT_GRASS, false);
             }
             return;
         }
-        if (roll < 0.45) {
+        if (roll < 0.50) {
             world.getBlockAt(x, y, z).setType(Material.FERN, false);
             return;
         }
-        if (roll < 0.73 && world.getBlockAt(x, y + 1, z).getType().isAir()) {
+        if (roll < 0.78 && world.getBlockAt(x, y + 1, z).getType().isAir()) {
             world.getBlockAt(x, y, z).setType(Material.TALL_GRASS, false);
             return;
         }

@@ -82,13 +82,13 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     private Material pickLayerMaterial(int y, int topY, double islandMask) {
         if (y == topY) {
-            return islandMask < 0.52 ? Material.SAND : Material.GRASS_BLOCK;
+            return islandMask < 0.30 ? Material.SAND : Material.GRASS_BLOCK;
         }
         if (topY >= SEA_LEVEL + 14 && topY - y <= 2) {
             return Material.STONE;
         }
         if (topY - y <= 4) {
-            return islandMask < 0.52 ? Material.SAND : Material.DIRT;
+            return islandMask < 0.30 ? Material.SAND : Material.DIRT;
         }
         return Material.STONE;
     }
