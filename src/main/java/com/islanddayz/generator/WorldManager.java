@@ -86,4 +86,9 @@ public class WorldManager {
             throw new IllegalStateException("Mundo ainda não foi criado.");
         }
     }
+
+    public World getWorld() {
+        ensureWorld();
+        return world;
+    }
 }
