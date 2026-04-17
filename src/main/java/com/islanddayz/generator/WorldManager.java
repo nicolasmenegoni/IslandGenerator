@@ -38,7 +38,7 @@ public class WorldManager {
 
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0, 0);
-        border.setSize(2048);
+        border.setSize(512);
 
         world.setStorm(false);
         world.setThundering(false);
@@ -47,14 +47,14 @@ public class WorldManager {
 
         Location spawn = findBeachSpawn();
         world.setSpawnLocation(spawn);
-        plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border 2048x2048 aplicada.");
+        plugin.getLogger().info("Mundo '" + WORLD_NAME + "' pronto. Border 512x512 aplicada.");
     }
 
     public Location findBeachSpawn() {
         ensureWorld();
         for (int i = 0; i < 200; i++) {
             double angle = random.nextDouble() * Math.PI * 2;
-            double radius = 420 + random.nextDouble() * 180;
+            double radius = 80 + random.nextDouble() * 55;
             int x = (int) Math.round(Math.cos(angle) * radius);
             int z = (int) Math.round(Math.sin(angle) * radius);
 
