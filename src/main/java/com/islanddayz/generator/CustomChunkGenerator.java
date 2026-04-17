@@ -1,6 +1,7 @@
 package com.islanddayz.generator;
 
 import org.bukkit.Material;
+import org.bukkit.Chunk;
 import org.bukkit.block.BlockFace;
 import org.bukkit.World;
 import org.bukkit.generator.BlockPopulator;
@@ -135,9 +136,9 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
 
         @Override
-        public void populate(WorldInfo worldInfo, Random random, int chunkX, int chunkZ, LimitedRegion region) {
-            int startX = chunkX << 4;
-            int startZ = chunkZ << 4;
+        public void populate(World world, Random random, Chunk source) {
+            int startX = source.getX() << 4;
+            int startZ = source.getZ() << 4;
 
             for (int localX = 2; localX <= 13; localX += 2) {
                 for (int localZ = 2; localZ <= 13; localZ += 2) {
@@ -152,25 +153,25 @@ public class CustomChunkGenerator extends ChunkGenerator {
                         continue;
                     }
 
-                    int y = region.getHighestBlockYAt(x, z);
-                    if (y <= region.getMinHeight() + 2 || y >= region.getMaxHeight() - 10) {
+                    int y = world.getHighestBlockYAt(x, z);
+                    if (y <= world.getMinHeight() + 2 || y >= world.getMaxHeight() - 10) {
                         continue;
                     }
 
-                    Material ground = region.getType(x, y - 1, z);
+                    Material ground = world.getBlockAt(x, y - 1, z).getType();
                     if (ground != Material.SAND) {
                         continue;
                     }
-                    if (!region.getType(x, y, z).isAir() || !region.getType(x, y + 1, z).isAir()) {
+                    if (!world.getBlockAt(x, y, z).getType().isAir() || !world.getBlockAt(x, y + 1, z).getType().isAir()) {
                         continue;
                     }
 
-                    generatePalm(region, random, x, y, z);
+                    generatePalm(world, random, x, y, z);
                 }
             }
         }
 
-        private void generatePalm(LimitedRegion region, Random random, int x, int y, int z) {
+        private void generatePalm(World world, Random random, int x, int y, int z) {
             int height = 6 + random.nextInt(4);
             BlockFace bendFace = switch (random.nextInt(4)) {
                 case 0 -> BlockFace.NORTH;
@@ -186,29 +187,29 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     tx += bendFace.getModX();
                     tz += bendFace.getModZ();
                 }
-                if (!region.getType(tx, y + i, tz).isAir()) {
+                if (!world.getBlockAt(tx, y + i, tz).getType().isAir()) {
                     return;
                 }
-                region.setType(tx, y + i, tz, Material.JUNGLE_LOG);
+                world.getBlockAt(tx, y + i, tz).setType(Material.JUNGLE_LOG, false);
             }
 
             int topY = y + height;
-            region.setType(tx, topY, tz, Material.JUNGLE_LEAVES);
-            buildFrond(region, tx, topY, tz, 1, 0);
-            buildFrond(region, tx, topY, tz, -1, 0);
-            buildFrond(region, tx, topY, tz, 0, 1);
-            buildFrond(region, tx, topY, tz, 0, -1);
-            buildFrond(region, tx, topY, tz, 1, 1);
-            buildFrond(region, tx, topY, tz, -1, -1);
+            world.getBlockAt(tx, topY, tz).setType(Material.JUNGLE_LEAVES, false);
+            buildFrond(world, tx, topY, tz, 1, 0);
+            buildFrond(world, tx, topY, tz, -1, 0);
+            buildFrond(world, tx, topY, tz, 0, 1);
+            buildFrond(world, tx, topY, tz, 0, -1);
+            buildFrond(world, tx, topY, tz, 1, 1);
+            buildFrond(world, tx, topY, tz, -1, -1);
         }
 
-        private void buildFrond(LimitedRegion region, int x, int y, int z, int dx, int dz) {
+        private void buildFrond(World world, int x, int y, int z, int dx, int dz) {
             for (int i = 1; i <= 4; i++) {
                 int lx = x + dx * i;
                 int lz = z + dz * i;
                 int ly = y - (i > 2 ? 1 : 0);
-                if (region.getType(lx, ly, lz).isAir()) {
-                    region.setType(lx, ly, lz, Material.JUNGLE_LEAVES);
+                if (world.getBlockAt(lx, ly, lz).getType().isAir()) {
+                    world.getBlockAt(lx, ly, lz).setType(Material.JUNGLE_LEAVES, false);
                 }
             }
         }
