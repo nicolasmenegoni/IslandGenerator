@@ -58,9 +58,9 @@ public final class IslandDayzPlugin extends JavaPlugin {
         mapView.setCenterX(0);
         mapView.setCenterZ(0);
         mapView.setScale(MapView.Scale.NORMAL); // nível 2
-        mapView.setTrackingPosition(false);
-        mapView.setUnlimitedTracking(false);
-        mapView.setLocked(true);
+        mapView.setTrackingPosition(true);
+        mapView.setUnlimitedTracking(true);
+        mapView.setLocked(false);
 
         for (MapRenderer renderer : new ArrayList<>(mapView.getRenderers())) {
             mapView.removeRenderer(renderer);
