@@ -29,9 +29,13 @@ public class NaturalPopulator extends BlockPopulator {
                     continue;
                 }
 
-                int y = world.getHighestBlockYAt(x, z);
+                int highestY = world.getHighestBlockYAt(x, z);
+                int y = highestY + 1;
                 Material ground = world.getBlockAt(x, y - 1, z).getType();
-                if (ground == Material.WATER || ground == Material.SAND) {
+                if (ground == Material.WATER || ground == Material.SAND || ground == Material.RED_SAND) {
+                    continue;
+                }
+                if (ground != Material.GRASS_BLOCK && ground != Material.DIRT && ground != Material.COARSE_DIRT) {
                     continue;
                 }
                 if (!world.getBlockAt(x, y, z).getType().isAir()) {
@@ -200,7 +204,7 @@ public class NaturalPopulator extends BlockPopulator {
 
                 int px = x + dx;
                 int pz = z + dz;
-                int py = world.getHighestBlockYAt(px, pz);
+                int py = world.getHighestBlockYAt(px, pz) + 1;
                 if (!world.getBlockAt(px, py, pz).getType().isAir()) {
                     continue;
                 }
