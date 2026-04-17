@@ -1,12 +1,12 @@
 package com.islanddayz.generator;
 
 import org.bukkit.Material;
-import org.bukkit.Chunk;
 import org.bukkit.block.BlockFace;
 import org.bukkit.World;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.generator.WorldInfo;
+import org.bukkit.util.noise.SimplexNoiseGenerator;
 
 import java.util.List;
 import java.util.Random;
@@ -17,6 +17,8 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private static final int BORDER_HALF = 256;
 
     private final IslandGenerator islandGenerator;
+    private final SimplexNoiseGenerator hillsNoise = new SimplexNoiseGenerator(918273L);
+    private final SimplexNoiseGenerator detailNoise = new SimplexNoiseGenerator(123987L);
 
     public CustomChunkGenerator(IslandGenerator islandGenerator) {
         this.islandGenerator = islandGenerator;
@@ -36,24 +38,44 @@ public class CustomChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
-                int topY = computeSimpleIslandHeight(islandMask);
+                int topY = computeSimpleIslandHeight(worldX, worldZ, islandMask);
                 for (int y = 40; y <= topY; y++) {
                     chunkData.setBlock(localX, y, localZ, pickLayerMaterial(y, topY, islandMask));
                 }
+
+                tryPlacePalm(chunkData, worldX, worldZ, localX, localZ, topY, islandMask);
             }
         }
     }
 
-    private int computeSimpleIslandHeight(double islandMask) {
-        int elevation = (int) Math.round(islandMask * 16.0);
-        return SEA_LEVEL + Math.max(1, elevation);
+    private int computeSimpleIslandHeight(int worldX, int worldZ, double islandMask) {
+        double coastalFlatten = smoothStep(0.08, 0.52, islandMask);
+        double interiorBoost = smoothStep(0.45, 0.95, islandMask);
+
+        double base = SEA_LEVEL + 1 + (islandMask * 19.0);
+        double hills = hillsNoise.noise(worldX * 0.010, worldZ * 0.010) * 7.5;
+        double detail = detailNoise.noise(worldX * 0.025, worldZ * 0.025) * 2.2;
+        double rugged = Math.abs(hillsNoise.noise(worldX * 0.017, worldZ * 0.017)) * 5.0;
+
+        double natural = base + ((hills + detail) * coastalFlatten) + (rugged * interiorBoost);
+
+        if (islandMask < 0.55) {
+            double beachBlend = smoothStep(0.08, 0.55, islandMask);
+            double maxCoastHeight = SEA_LEVEL + 1 + (beachBlend * 7.0);
+            natural = Math.min(natural, maxCoastHeight);
+        }
+
+        return Math.max(SEA_LEVEL + 1, (int) Math.round(natural));
     }
 
     private Material pickLayerMaterial(int y, int topY, double islandMask) {
         if (y == topY) {
             return islandMask < 0.52 ? Material.SAND : Material.GRASS_BLOCK;
         }
-        if (topY - y <= 3) {
+        if (topY >= SEA_LEVEL + 14 && topY - y <= 2) {
+            return Material.STONE;
+        }
+        if (topY - y <= 4) {
             return islandMask < 0.52 ? Material.SAND : Material.DIRT;
         }
         return Material.STONE;
@@ -90,7 +112,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
 
     @Override
     public List<BlockPopulator> getDefaultPopulators(World world) {
-        return List.of(new PalmTreePopulator(islandGenerator));
+        return List.of();
     }
 
     @Override
@@ -128,90 +150,72 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return false;
     }
 
-    private static final class PalmTreePopulator extends BlockPopulator {
-        private final IslandGenerator islandGenerator;
-
-        private PalmTreePopulator(IslandGenerator islandGenerator) {
-            this.islandGenerator = islandGenerator;
+    private void tryPlacePalm(ChunkData chunkData, int worldX, int worldZ, int localX, int localZ, int topY, double islandMask) {
+        if (localX < 3 || localX > 12 || localZ < 3 || localZ > 12) {
+            return;
+        }
+        if (islandMask < 0.18 || islandMask > 0.56) {
+            return;
+        }
+        if (chunkData.getType(localX, topY, localZ) != Material.SAND) {
+            return;
+        }
+        if (!isPalmSpot(worldX, worldZ)) {
+            return;
         }
 
-        @Override
-        public void populate(World world, Random random, Chunk source) {
-            int startX = source.getX() << 4;
-            int startZ = source.getZ() << 4;
+        int height = 6 + Math.floorMod(worldX * 13 + worldZ * 17, 3);
+        BlockFace bendFace = switch (Math.floorMod(worldX * 7 + worldZ * 5, 4)) {
+            case 0 -> BlockFace.NORTH;
+            case 1 -> BlockFace.SOUTH;
+            case 2 -> BlockFace.EAST;
+            default -> BlockFace.WEST;
+        };
 
-            for (int localX = 2; localX <= 13; localX += 2) {
-                for (int localZ = 2; localZ <= 13; localZ += 2) {
-                    if (random.nextDouble() > 0.16) {
-                        continue;
-                    }
+        int tx = localX;
+        int tz = localZ;
+        for (int i = 1; i <= height; i++) {
+            if (i > 2 && Math.floorMod(worldX * 31 + worldZ * 29 + i * 11, 100) < 42) {
+                tx += bendFace.getModX();
+                tz += bendFace.getModZ();
+            }
+            if (tx < 1 || tx > 14 || tz < 1 || tz > 14) {
+                return;
+            }
+            chunkData.setBlock(tx, topY + i, tz, Material.JUNGLE_LOG);
+        }
 
-                    int x = startX + localX;
-                    int z = startZ + localZ;
-                    double mask = islandGenerator.islandMask(x, z);
-                    if (mask < 0.18 || mask > 0.58) {
-                        continue;
-                    }
+        int crownY = topY + height;
+        chunkData.setBlock(tx, crownY + 1, tz, Material.JUNGLE_LEAVES);
+        buildFrond(chunkData, tx, crownY, tz, 1, 0);
+        buildFrond(chunkData, tx, crownY, tz, -1, 0);
+        buildFrond(chunkData, tx, crownY, tz, 0, 1);
+        buildFrond(chunkData, tx, crownY, tz, 0, -1);
+        buildFrond(chunkData, tx, crownY, tz, 1, 1);
+        buildFrond(chunkData, tx, crownY, tz, -1, -1);
+    }
 
-                    int y = world.getHighestBlockYAt(x, z);
-                    if (y <= world.getMinHeight() + 2 || y >= world.getMaxHeight() - 10) {
-                        continue;
-                    }
-
-                    Material ground = world.getBlockAt(x, y - 1, z).getType();
-                    if (ground != Material.SAND) {
-                        continue;
-                    }
-                    if (!world.getBlockAt(x, y, z).getType().isAir() || !world.getBlockAt(x, y + 1, z).getType().isAir()) {
-                        continue;
-                    }
-
-                    generatePalm(world, random, x, y, z);
-                }
+    private void buildFrond(ChunkData chunkData, int x, int y, int z, int dx, int dz) {
+        for (int i = 1; i <= 3; i++) {
+            int lx = x + dx * i;
+            int lz = z + dz * i;
+            int ly = y - (i > 1 ? 1 : 0);
+            if (lx < 0 || lx > 15 || lz < 0 || lz > 15) {
+                continue;
+            }
+            if (chunkData.getType(lx, ly, lz).isAir()) {
+                chunkData.setBlock(lx, ly, lz, Material.JUNGLE_LEAVES);
             }
         }
+    }
 
-        private void generatePalm(World world, Random random, int x, int y, int z) {
-            int height = 6 + random.nextInt(4);
-            BlockFace bendFace = switch (random.nextInt(4)) {
-                case 0 -> BlockFace.NORTH;
-                case 1 -> BlockFace.SOUTH;
-                case 2 -> BlockFace.EAST;
-                default -> BlockFace.WEST;
-            };
+    private boolean isPalmSpot(int worldX, int worldZ) {
+        int hash = Math.floorMod(worldX * 7349 + worldZ * 9151 + worldX * worldZ, 100);
+        return hash < 18;
+    }
 
-            int tx = x;
-            int tz = z;
-            for (int i = 0; i < height; i++) {
-                if (i > 1 && random.nextDouble() < 0.45) {
-                    tx += bendFace.getModX();
-                    tz += bendFace.getModZ();
-                }
-                if (!world.getBlockAt(tx, y + i, tz).getType().isAir()) {
-                    return;
-                }
-                world.getBlockAt(tx, y + i, tz).setType(Material.JUNGLE_LOG, false);
-            }
-
-            int topY = y + height;
-            world.getBlockAt(tx, topY, tz).setType(Material.JUNGLE_LEAVES, false);
-            buildFrond(world, tx, topY, tz, 1, 0);
-            buildFrond(world, tx, topY, tz, -1, 0);
-            buildFrond(world, tx, topY, tz, 0, 1);
-            buildFrond(world, tx, topY, tz, 0, -1);
-            buildFrond(world, tx, topY, tz, 1, 1);
-            buildFrond(world, tx, topY, tz, -1, -1);
-        }
-
-        private void buildFrond(World world, int x, int y, int z, int dx, int dz) {
-            for (int i = 1; i <= 4; i++) {
-                int lx = x + dx * i;
-                int lz = z + dz * i;
-                int ly = y - (i > 2 ? 1 : 0);
-                if (world.getBlockAt(lx, ly, lz).getType().isAir()) {
-                    world.getBlockAt(lx, ly, lz).setType(Material.JUNGLE_LEAVES, false);
-                }
-            }
-        }
+    private double smoothStep(double start, double end, double value) {
+        double t = Math.max(0.0, Math.min(1.0, (value - start) / (end - start)));
+        return t * t * (3.0 - 2.0 * t);
     }
 }
