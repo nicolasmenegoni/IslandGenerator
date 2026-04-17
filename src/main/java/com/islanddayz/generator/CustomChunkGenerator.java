@@ -240,45 +240,4 @@ public class CustomChunkGenerator extends ChunkGenerator {
         return t * t * (3.0 - 2.0 * t);
     }
 
-        private void addVines(World world, Random random, int cx, int baseY, int cz, int count) {
-            for (int i = 0; i < count; i++) {
-                int x = cx + random.nextInt(9) - 4;
-                int z = cz + random.nextInt(9) - 4;
-                int y = baseY + random.nextInt(5);
-                if (!world.getBlockAt(x, y, z).getType().name().contains("LEAVES")) {
-                    continue;
-                }
-                int length = 2 + random.nextInt(4);
-                for (int l = 1; l <= length; l++) {
-                    if (!world.getBlockAt(x, y - l, z).getType().isAir()) {
-                        break;
-                    }
-                    world.getBlockAt(x, y - l, z).setType(Material.VINE, false);
-                }
-            }
-        }
-
-        private void placeGroundVegetation(World world, Random random, int x, int y, int z, double mask) {
-            double roll = random.nextDouble();
-            if (roll < 0.14 && mask > 0.50) {
-                world.getBlockAt(x, y, z).setType(Material.AZALEA, false);
-                return;
-            }
-            if (roll < 0.30 && mask > 0.50) {
-                world.getBlockAt(x, y, z).setType(Material.FLOWERING_AZALEA, false);
-                return;
-            }
-            if (roll < 0.53) {
-                world.getBlockAt(x, y, z).setType(Material.FERN, false);
-                return;
-            }
-            if (roll < 0.80 && world.getBlockAt(x, y + 1, z).getType().isAir()) {
-                world.getBlockAt(x, y, z).setType(Material.TALL_GRASS, false);
-                return;
-            }
-            if (roll < 0.95) {
-                world.getBlockAt(x, y, z).setType(Material.SHORT_GRASS, false);
-            }
-        }
-    }
 }
