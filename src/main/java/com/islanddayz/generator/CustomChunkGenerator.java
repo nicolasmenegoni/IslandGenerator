@@ -178,12 +178,21 @@ public class CustomChunkGenerator extends ChunkGenerator {
         }
 
         int height = 6 + Math.floorMod(worldX * 13 + worldZ * 17, 3);
-        BlockFace bendFace = switch (Math.floorMod(worldX * 7 + worldZ * 5, 4)) {
-            case 0 -> BlockFace.NORTH;
-            case 1 -> BlockFace.SOUTH;
-            case 2 -> BlockFace.EAST;
-            default -> BlockFace.WEST;
-        };
+        BlockFace bendFace;
+        switch (Math.floorMod(worldX * 7 + worldZ * 5, 4)) {
+            case 0:
+                bendFace = BlockFace.NORTH;
+                break;
+            case 1:
+                bendFace = BlockFace.SOUTH;
+                break;
+            case 2:
+                bendFace = BlockFace.EAST;
+                break;
+            default:
+                bendFace = BlockFace.WEST;
+                break;
+        }
 
         int tx = localX;
         int tz = localZ;

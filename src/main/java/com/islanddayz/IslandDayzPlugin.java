@@ -35,10 +35,11 @@ public final class IslandDayzPlugin extends JavaPlugin {
             return false;
         }
 
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("§cApenas jogadores podem usar este comando.");
             return true;
         }
+        Player player = (Player) sender;
 
         player.teleport(worldManager.findBeachSpawn());
         giveIslandMap(player);

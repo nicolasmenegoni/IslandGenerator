@@ -111,6 +111,13 @@ public class IslandGenerator {
         return v * v * (3 - 2 * v);
     }
 
-    private record SegmentDistance(double distance, double progress) {
+    private static final class SegmentDistance {
+        private final double distance;
+        private final double progress;
+
+        private SegmentDistance(double distance, double progress) {
+            this.distance = distance;
+            this.progress = progress;
+        }
     }
 }
