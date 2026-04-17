@@ -53,10 +53,8 @@ public class WorldManager {
     public Location findBeachSpawn() {
         ensureWorld();
         for (int i = 0; i < 200; i++) {
-            double angle = random.nextDouble() * Math.PI * 2;
-            double radius = 80 + random.nextDouble() * 55;
-            int x = (int) Math.round(Math.cos(angle) * radius);
-            int z = (int) Math.round(Math.sin(angle) * radius);
+            int x = -220 + random.nextInt(441);
+            int z = -220 + random.nextInt(441);
 
             world.getChunkAt(x >> 4, z >> 4);
             int y = world.getHighestBlockYAt(x, z);

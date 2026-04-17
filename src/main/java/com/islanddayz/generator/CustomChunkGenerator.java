@@ -19,6 +19,7 @@ public class CustomChunkGenerator extends ChunkGenerator {
     private final IslandGenerator islandGenerator;
     private final SimplexNoiseGenerator hillsNoise = new SimplexNoiseGenerator(918273L);
     private final SimplexNoiseGenerator detailNoise = new SimplexNoiseGenerator(123987L);
+    private final SimplexNoiseGenerator ridgeNoise = new SimplexNoiseGenerator(778821L);
 
     public CustomChunkGenerator(IslandGenerator islandGenerator) {
         this.islandGenerator = islandGenerator;
@@ -52,17 +53,23 @@ public class CustomChunkGenerator extends ChunkGenerator {
         double coastalFlatten = smoothStep(0.08, 0.52, islandMask);
         double interiorBoost = smoothStep(0.45, 0.95, islandMask);
 
-        double base = SEA_LEVEL + 1 + (islandMask * 19.0);
+        double base = SEA_LEVEL + 1 + (islandMask * 17.0);
         double hills = hillsNoise.noise(worldX * 0.010, worldZ * 0.010) * 7.5;
         double detail = detailNoise.noise(worldX * 0.025, worldZ * 0.025) * 2.2;
-        double rugged = Math.abs(hillsNoise.noise(worldX * 0.017, worldZ * 0.017)) * 5.0;
+        double rugged = Math.abs(ridgeNoise.noise(worldX * 0.018, worldZ * 0.018)) * 6.5;
+        double longRidge = Math.abs(ridgeNoise.noise((worldX + 250) * 0.006, (worldZ - 100) * 0.012)) * 7.0;
 
-        double natural = base + ((hills + detail) * coastalFlatten) + (rugged * interiorBoost);
+        double natural = base + ((hills + detail) * coastalFlatten) + ((rugged + longRidge) * interiorBoost);
 
         if (islandMask < 0.55) {
             double beachBlend = smoothStep(0.08, 0.55, islandMask);
             double maxCoastHeight = SEA_LEVEL + 1 + (beachBlend * 7.0);
             natural = Math.min(natural, maxCoastHeight);
+        }
+
+        if (islandMask > 0.72) {
+            double interiorPeak = smoothStep(0.72, 1.0, islandMask);
+            natural += interiorPeak * 8.5;
         }
 
         return Math.max(SEA_LEVEL + 1, (int) Math.round(natural));
